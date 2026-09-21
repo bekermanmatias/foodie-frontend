@@ -131,7 +131,7 @@ export function ReservasPage() {
   const canOperateReservations = true;
   const canDeleteReservations = ["restaurant_owner", "restaurant_manager"].includes(currentUser?.role || "");
   const canCancelReservations = ["restaurant_owner", "restaurant_manager", "host", "events"].includes(currentUser?.role || "");
-  const canRescheduleReservations = ["restaurant_owner", "restaurant_manager", "events"].includes(currentUser?.role || "");
+  const canRescheduleReservations = ["restaurant_owner", "restaurant_manager", "host", "events"].includes(currentUser?.role || "");
   const canCreateEvents = ["restaurant_owner", "restaurant_manager", "events"].includes(currentUser?.role || "");
   const eventAllocatedCovers = reservationForm.eventRooms.reduce((total, room) => total + (Number(room.allocatedCovers) || 0), 0);
   const eventTotalCovers = Number(reservationForm.partySize) || 0;
@@ -566,7 +566,7 @@ export function ReservasPage() {
                           Cambiar mesa
                         </button>
                       ) : null}
-                      {["pending", "confirmed"].includes(reservation.status) ? (
+                      {canRescheduleReservations && ["pending", "confirmed"].includes(reservation.status) ? (
                         <button type="button" onClick={() => { setRescheduleError(""); setRescheduleDate(reservation.serviceDate.slice(0, 10)); setRescheduleTarget(reservation); }} className="rounded-full border border-brand-orange px-3 py-2 text-xs font-medium text-brand-orange">
                           Cambiar fecha
                         </button>
