@@ -130,7 +130,8 @@ export function ReservasPage() {
   const isEventsUser = currentUser?.role === "events";
   const canOperateReservations = true;
   const canDeleteReservations = ["restaurant_owner", "restaurant_manager"].includes(currentUser?.role || "");
-  const canCancelReservations = canDeleteReservations || isEventsUser;
+  const canCancelReservations = ["restaurant_owner", "restaurant_manager", "host", "events"].includes(currentUser?.role || "");
+  const canRescheduleReservations = ["restaurant_owner", "restaurant_manager", "events"].includes(currentUser?.role || "");
   const canCreateEvents = ["restaurant_owner", "restaurant_manager", "events"].includes(currentUser?.role || "");
   const eventAllocatedCovers = reservationForm.eventRooms.reduce((total, room) => total + (Number(room.allocatedCovers) || 0), 0);
   const eventTotalCovers = Number(reservationForm.partySize) || 0;
@@ -795,10 +796,10 @@ export function ReservasPage() {
       >
         <div className="grid gap-3">
           {canOperateReservations && ["pending", "confirmed"].includes(mobileActionReservation?.status || "") ? <button type="button" onClick={() => { setReassignReservation(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-brand-orange px-4 py-3 text-sm font-semibold text-brand-orange">Cambiar mesas</button> : null}
-          {mobileActionReservation && ["pending", "confirmed"].includes(mobileActionReservation.status) ? <button type="button" onClick={() => { setRescheduleError(""); setRescheduleDate(mobileActionReservation.serviceDate.slice(0, 10)); setRescheduleTarget(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-brand-orange px-4 py-3 text-sm font-semibold text-brand-orange">Cambiar fecha</button> : null}
+          {canRescheduleReservations && mobileActionReservation && ["pending", "confirmed"].includes(mobileActionReservation.status) ? <button type="button" onClick={() => { setRescheduleError(""); setRescheduleDate(mobileActionReservation.serviceDate.slice(0, 10)); setRescheduleTarget(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-brand-orange px-4 py-3 text-sm font-semibold text-brand-orange">Cambiar fecha</button> : null}
           {canOperateReservations && canCancelReservations && mobileActionReservation && ["pending", "confirmed", "seated"].includes(mobileActionReservation.status) ? <button type="button" onClick={() => { setCancelError(""); setCancelReason(""); setCancelTarget(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-red-200 px-4 py-3 text-sm font-semibold text-red-700">Cancelar reserva</button> : null}
           {canOperateReservations && canDeleteReservations && mobileActionReservation?.status === "cancelled" ? <button type="button" onClick={() => { setDeleteError(""); setDeleteTarget(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-red-200 px-4 py-3 text-sm font-semibold text-red-700">Eliminar reserva</button> : null}
-          {!canOperateReservations || !(["pending", "confirmed"].includes(mobileActionReservation?.status || "") || (canCancelReservations && ["pending", "confirmed", "seated"].includes(mobileActionReservation?.status || "")) || (canDeleteReservations && mobileActionReservation?.status === "cancelled")) ? <p className="text-sm text-white/70">No hay acciones adicionales para esta reserva.</p> : null}
+          {!canOperateReservations || !((canRescheduleReservations && ["pending", "confirmed"].includes(mobileActionReservation?.status || "")) || (canCancelReservations && ["pending", "confirmed", "seated"].includes(mobileActionReservation?.status || "")) || (canDeleteReservations && mobileActionReservation?.status === "cancelled")) ? <p className="text-sm text-white/70">No hay acciones adicionales para esta reserva.</p> : null}
         </div>
       </AppModal>
 
