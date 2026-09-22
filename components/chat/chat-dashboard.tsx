@@ -417,10 +417,10 @@ export function ChatDashboard() {
   };
 
   return (
-    <div className="h-[78vh] min-h-[420px] overflow-hidden rounded-[28px] border border-[#E9DED3] bg-[linear-gradient(180deg,#FFFCF9_0%,#F8F4EE_100%)] xl:h-[calc(100dvh-18rem)] xl:min-h-[420px] 2xl:h-[78vh] 2xl:min-h-[620px]">
+    <div className="h-[78vh] min-h-[420px] overflow-hidden rounded-[28px] border border-[#E9DED3] bg-[linear-gradient(180deg,#FFFCF9_0%,#F8F4EE_100%)] xl:h-full xl:min-h-0">
       <Toaster position="top-right" richColors />
-      <div className="flex h-full min-h-[420px] flex-col xl:flex-row 2xl:min-h-[620px]">
-        <section className={`${isMobile && !showMobileChatList ? "hidden" : "flex"} w-full shrink-0 flex-col border-b border-brand-line bg-[#FBF7F2] xl:w-[320px] xl:border-b-0 xl:border-r 2xl:w-[380px]`}>
+      <div className="flex h-full min-h-[420px] flex-col xl:min-h-0 xl:flex-row">
+        <section className={`${isMobile && !showMobileChatList ? "hidden" : "flex"} w-full shrink-0 flex-col border-b border-brand-line bg-[#FBF7F2] xl:w-[300px] xl:border-b-0 xl:border-r 2xl:w-[340px]`}>
           <div className="border-b border-brand-line px-5 py-4">
             <div className="flex items-center justify-between gap-3">
               <div>

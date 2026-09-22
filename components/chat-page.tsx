@@ -13,6 +13,7 @@ export function ChatPage() {
     <WorkspaceShell
       title="Chat y WhatsApp."
       description="Opera WhatsApp desde Foodie con una vista unificada de conversaciones, control manual, etiquetas y exportacion."
+      fillViewport
     >
       {chatSession.token ? (
         <ChatAuthProvider>
