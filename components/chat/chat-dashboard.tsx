@@ -162,7 +162,7 @@ export function ChatDashboard() {
   }, []);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 1280);
+    const onResize = () => setIsMobile(window.innerWidth < 1024);
     onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);

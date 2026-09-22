@@ -127,7 +127,7 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
   return (
     <div className={`h-screen overflow-hidden bg-black ${compactShortDesktop ? "workspace-chat-compact" : ""}`}>
       <div className="grid h-screen overflow-x-hidden bg-[radial-gradient(circle_at_85%_10%,rgba(0,0,0,0.85)_0,rgba(0,0,0,0.94)_31%,transparent_52%),linear-gradient(135deg,#F4511E_0%,#7A372C_42%,#050505_76%)] xl:grid-cols-[clamp(220px,14vw,272px)_minmax(0,1fr)]">
-        <aside className="workspace-sidebar hidden h-screen overflow-hidden border-r border-white/10 bg-[#1F1F21] text-white xl:block">
+        <aside className={`workspace-sidebar hidden h-screen overflow-hidden border-r border-white/10 bg-[#1F1F21] text-white ${compactShortDesktop ? "lg:block" : "xl:block"}`}>
           <div className="workspace-sidebar-content flex h-full flex-col px-6 py-7 2xl:px-8 2xl:py-8">
             <div className="workspace-sidebar-brand flex items-center gap-3">
               <RestaurantAvatar image={workspaceImage} name={workspaceName} />
@@ -169,8 +169,8 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
           </div>
         </aside>
 
-        <main className={`workspace-main h-screen min-w-0 overflow-x-hidden overflow-y-auto px-4 py-4 sm:px-5 sm:py-6 md:px-8 ${fillViewport ? "xl:px-4 xl:py-4 2xl:px-8 2xl:py-4" : "xl:px-8 xl:py-8 2xl:px-12 2xl:py-10"}`}>
-          <div className="relative z-40 mb-5 rounded-[26px] border border-white/10 bg-[#1F1F21] p-4 text-white shadow-[0_18px_40px_rgba(0,0,0,0.18)] xl:hidden">
+        <main className={`workspace-main h-screen min-w-0 overflow-x-hidden overflow-y-auto px-4 py-4 sm:px-5 sm:py-6 md:px-8 ${fillViewport ? `${compactShortDesktop ? "lg:px-4 lg:py-4" : "xl:px-4 xl:py-4"} 2xl:px-8 2xl:py-4` : "xl:px-8 xl:py-8 2xl:px-12 2xl:py-10"}`}>
+          <div className={`relative z-40 mb-5 rounded-[26px] border border-white/10 bg-[#1F1F21] p-4 text-white shadow-[0_18px_40px_rgba(0,0,0,0.18)] ${compactShortDesktop ? "lg:hidden" : "xl:hidden"}`}>
             <div className="flex items-center gap-3">
               <RestaurantAvatar image={workspaceImage} name={workspaceName} size="md" />
               <div className="min-w-0">
@@ -205,18 +205,18 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
             ) : null}
           </div>
 
-          <div className={`workspace-content-card ${fillViewport ? "xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:rounded-[26px] xl:p-4 2xl:rounded-[30px] 2xl:p-5" : "xl:rounded-[32px] 2xl:rounded-[36px]"} min-h-[70vh] rounded-[28px] border border-white/70 bg-white p-4 shadow-[0_32px_70px_rgba(0,0,0,0.18)] sm:p-5 md:p-8`}>
+          <div className={`workspace-content-card ${fillViewport ? `${compactShortDesktop ? "lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:rounded-[26px] lg:p-4" : "xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:rounded-[26px] xl:p-4"} 2xl:rounded-[30px] 2xl:p-5` : "xl:rounded-[32px] 2xl:rounded-[36px]"} min-h-[70vh] rounded-[28px] border border-white/70 bg-white p-4 shadow-[0_32px_70px_rgba(0,0,0,0.18)] sm:p-5 md:p-8`}>
             {hideIntro ? null : (
-              <div className={`workspace-content-intro ${fillViewport ? "xl:shrink-0 xl:gap-3 xl:pb-3" : "pb-6 md:pb-7"} grid gap-4 border-b border-brand-line lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start`}>
+              <div className={`workspace-content-intro ${fillViewport ? `${compactShortDesktop ? "lg:shrink-0 lg:gap-3 lg:pb-3" : "xl:shrink-0 xl:gap-3 xl:pb-3"}` : "pb-6 md:pb-7"} grid gap-4 border-b border-brand-line lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start`}>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.42em] text-brand-orange md:text-xs md:tracking-[0.5em]">{workspaceLabel}</p>
-                  <h1 className={`workspace-content-title ${fillViewport ? "xl:mt-1 xl:text-3xl 2xl:text-4xl" : "md:mt-4 md:text-5xl 2xl:text-6xl"} mt-3 text-4xl font-extrabold tracking-[-0.06em] text-brand-ink`}>{title}</h1>
+                  <h1 className={`workspace-content-title ${fillViewport ? `${compactShortDesktop ? "lg:mt-1 lg:text-3xl" : "xl:mt-1 xl:text-3xl"} 2xl:text-4xl` : "md:mt-4 md:text-5xl 2xl:text-6xl"} mt-3 text-4xl font-extrabold tracking-[-0.06em] text-brand-ink`}>{title}</h1>
                 </div>
                 <PageInfoTooltip description={description} />
               </div>
             )}
 
-            <div className={`workspace-content-body ${hideIntro ? "" : fillViewport ? "mt-3" : "mt-6"} ${fillViewport ? "xl:min-h-0 xl:flex-1" : ""} grid gap-6`}>{children}</div>
+            <div className={`workspace-content-body ${hideIntro ? "" : fillViewport ? "mt-3" : "mt-6"} ${fillViewport ? `${compactShortDesktop ? "lg:min-h-0 lg:flex-1" : "xl:min-h-0 xl:flex-1"}` : ""} grid gap-6`}>{children}</div>
           </div>
         </main>
       </div>

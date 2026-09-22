@@ -71,7 +71,7 @@ body {
 }
 
 /* Densidad adicional sólo para Chat en notebooks de poca altura. */
-@media (min-width: 1280px) and (max-height: 800px) {
+@media (min-width: 1024px) and (max-height: 800px) {
   .workspace-chat-compact > div {
     grid-template-columns: 200px minmax(0, 1fr);
   }
@@ -145,6 +145,14 @@ body {
   .workspace-chat-compact .chat-empty-content > div svg { height: 24px; width: 24px; }
   .workspace-chat-compact .chat-empty-content > p:first-of-type { margin-top: 12px; font-size: 18px; }
   .workspace-chat-compact .chat-empty-content > p:last-child { margin-top: 5px; font-size: 12px; line-height: 1.5; }
+}
+
+/* El Chat conserva estructura de escritorio desde 1024px, aunque el resto del panel use xl. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .workspace-chat-compact > div { grid-template-columns: 200px minmax(0, 1fr); }
+  .workspace-chat-compact .chat-dashboard > div { flex-direction: row; min-height: 0; }
+  .workspace-chat-compact .chat-inbox { width: 256px; border-bottom: 0; border-right: 1px solid #E7E3DE; }
+  .workspace-chat-compact .chat-dashboard section:last-child { display: flex; }
 }
 
 .print-page {
