@@ -417,15 +417,15 @@ export function ChatDashboard() {
   };
 
   return (
-    <div className="h-[78vh] min-h-[420px] overflow-hidden rounded-[28px] border border-[#E9DED3] bg-[linear-gradient(180deg,#FFFCF9_0%,#F8F4EE_100%)] xl:h-full xl:min-h-0">
+    <div className="h-[78vh] min-h-[420px] overflow-hidden rounded-[28px] border border-[#E9DED3] bg-[linear-gradient(180deg,#FFFCF9_0%,#F8F4EE_100%)] xl:h-full xl:min-h-0 xl:rounded-[22px]">
       <Toaster position="top-right" richColors />
       <div className="flex h-full min-h-[420px] flex-col xl:min-h-0 xl:flex-row">
-        <section className={`${isMobile && !showMobileChatList ? "hidden" : "flex"} w-full shrink-0 flex-col border-b border-brand-line bg-[#FBF7F2] xl:w-[300px] xl:border-b-0 xl:border-r 2xl:w-[340px]`}>
-          <div className="border-b border-brand-line px-5 py-4">
-            <div className="flex items-center justify-between gap-3">
+        <section className={`${isMobile && !showMobileChatList ? "hidden" : "flex"} w-full shrink-0 flex-col border-b border-brand-line bg-[#FBF7F2] xl:w-[280px] xl:border-b-0 xl:border-r 2xl:w-[320px]`}>
+          <div className="border-b border-brand-line px-5 py-4 xl:px-4 xl:py-3">
+            <div className="flex items-center justify-between gap-3 xl:gap-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-orange">Inbox operativo</p>
-                <h2 className="mt-1 text-xl font-semibold text-brand-ink">Conversaciones</h2>
+                <h2 className="mt-1 text-xl font-semibold text-brand-ink xl:text-lg">Conversaciones</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setIsExportModalOpen(true)} className="rounded-full border border-[#E6D8CB] bg-[#FFF9F4] p-2 text-neutral-500 transition hover:border-[#D9C1AF] hover:bg-white hover:text-brand-ink" title="Exportar chats">
@@ -475,23 +475,23 @@ export function ChatDashboard() {
                       handleChatSelect(chat);
                     }
                   }}
-                  className={`group block w-full border-b border-[rgba(213,200,188,0.7)] px-4 py-4 text-left transition hover:bg-[#FFF8F1] ${activeChat?.chatId === chat.chatId ? "bg-[#FFF1E6]" : "bg-transparent"}`}
+                  className={`group block w-full border-b border-[rgba(213,200,188,0.7)] px-4 py-4 text-left transition hover:bg-[#FFF8F1] xl:px-3 xl:py-3 ${activeChat?.chatId === chat.chatId ? "bg-[#FFF1E6]" : "bg-transparent"}`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F2ECE5] text-sm font-semibold text-brand-ink">
+                  <div className="flex items-start gap-3 xl:gap-2">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F2ECE5] text-sm font-semibold text-brand-ink xl:h-10 xl:w-10 xl:rounded-xl xl:text-xs">
                       {getAvatarText(chat)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-brand-ink">{chat.contactName || chat.phoneNumber}</p>
-                          <div className="mt-1 inline-flex items-center gap-1 text-xs text-neutral-500">
+                          <p className="truncate text-sm font-semibold text-brand-ink xl:text-[13px]">{chat.contactName || chat.phoneNumber}</p>
+                          <div className="mt-1 inline-flex items-center gap-1 text-xs text-neutral-500 xl:mt-0.5 xl:text-[11px]">
                             <Phone className="h-3 w-3" />
                             {chat.phoneNumber}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-neutral-400">{formatChatDate(chat.lastMessageTimestamp)}</span>
+                          <span className="text-xs text-neutral-400 xl:text-[11px]">{formatChatDate(chat.lastMessageTimestamp)}</span>
                           <button
                             type="button"
                             onClick={(event) => {
@@ -505,26 +505,26 @@ export function ChatDashboard() {
                           </button>
                         </div>
                       </div>
-                      <p className="mt-2 truncate text-sm text-neutral-500">{chat.lastMessage || "Sin mensajes recientes"}</p>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <p className="mt-2 truncate text-sm text-neutral-500 xl:mt-1 xl:text-[13px]">{chat.lastMessage || "Sin mensajes recientes"}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 xl:mt-2 xl:gap-1.5">
                         <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] ${
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] xl:px-2 xl:py-0.5 xl:text-[10px] ${
                             chat.chatStatus === "bot" ? "bg-[#E8F4EC] text-[#2E6A46]" : "bg-[#FFF1EA] text-[#B65221]"
                           }`}
                         >
                           {chat.chatStatus === "bot" ? "Bot" : "Humano"}
                         </span>
                         {chat.assignedAdvisorName ? (
-                          <span className="rounded-full bg-[#F2ECE5] px-2.5 py-1 text-[11px] font-medium text-brand-ink">
+                          <span className="rounded-full bg-[#F2ECE5] px-2.5 py-1 text-[11px] font-medium text-brand-ink xl:px-2 xl:py-0.5 xl:text-[10px]">
                             {chat.assignedAdvisorName}
                           </span>
                         ) : null}
                         {chat.unreadCount > 0 ? (
-                          <span className="rounded-full bg-brand-orange px-2.5 py-1 text-[11px] font-semibold text-white">{chat.unreadCount}</span>
+                          <span className="rounded-full bg-brand-orange px-2.5 py-1 text-[11px] font-semibold text-white xl:px-2 xl:py-0.5 xl:text-[10px]">{chat.unreadCount}</span>
                         ) : null}
                       </div>
                       {chat.tags?.length ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
+                        <div className="mt-3 flex flex-wrap gap-2 xl:mt-2 xl:gap-1.5">
                           {chat.tags.slice(0, 3).map((tagName) => {
                             const tag = tagService.getTag(tagName);
                             return <ChatTagBadge key={tagName} name={tagName} color={tag?.color || "#6B7280"} size="sm" />;
@@ -547,9 +547,9 @@ export function ChatDashboard() {
         <section className={`${isMobile && showMobileChatList ? "hidden" : "flex"} min-w-0 flex-1 flex-col`}>
           {activeChat ? (
             <>
-              <header className="relative z-10 border-b border-brand-line bg-[rgba(255,252,249,0.76)] px-4 py-4 backdrop-blur md:px-6">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                  <div className="flex min-w-0 items-start gap-3">
+              <header className="relative z-10 border-b border-brand-line bg-[rgba(255,252,249,0.76)] px-4 py-4 backdrop-blur md:px-6 xl:px-4 xl:py-3">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between xl:gap-3">
+                  <div className="flex min-w-0 items-start gap-3 xl:gap-2">
                     {isMobile ? (
                       <button
                         type="button"
@@ -559,22 +559,22 @@ export function ChatDashboard() {
                         <ArrowLeft className="h-4 w-4" />
                       </button>
                     ) : null}
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F2ECE5] text-sm font-semibold text-brand-ink">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F2ECE5] text-sm font-semibold text-brand-ink xl:h-10 xl:w-10 xl:rounded-xl xl:text-xs">
                       {getAvatarText(activeChat)}
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate text-lg font-semibold text-brand-ink">{activeChat.contactName || activeChat.phoneNumber}</h3>
+                        <h3 className="truncate text-lg font-semibold text-brand-ink xl:text-base">{activeChat.contactName || activeChat.phoneNumber}</h3>
                         <span
-                          className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                          className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] xl:px-2.5 xl:py-0.5 xl:text-[10px] ${
                             activeChat.chatStatus === "bot" ? "bg-[#E8F4EC] text-[#2E6A46]" : "bg-[#FFF1EA] text-[#B65221]"
                           }`}
                         >
                           {activeChat.chatStatus === "bot" ? "Modo bot" : "Modo humano"}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm text-neutral-500">{activeChat.phoneNumber}</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <p className="mt-1 text-sm text-neutral-500 xl:mt-0.5 xl:text-[13px]">{activeChat.phoneNumber}</p>
+                      <div className="mt-3 flex flex-wrap gap-2 xl:mt-2 xl:gap-1.5">
                         {activeChat.tags?.map((tagName) => {
                           const tag = tagService.getTag(tagName);
                           return (
@@ -591,8 +591,8 @@ export function ChatDashboard() {
                     </div>
                   </div>
 
-                    <div className="flex flex-col gap-3 xl:items-end">
-                      <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col gap-3 xl:items-end xl:gap-2">
+                      <div className="flex flex-wrap gap-2 xl:gap-1.5">
                         <ChatTagSelector
                           availableTags={tagService.tags}
                           selectedTags={activeChat.tags || []}
@@ -603,9 +603,9 @@ export function ChatDashboard() {
                         />
                       </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3 xl:gap-2">
                       {activeChat.statusChangeTime && activeChat.chatStatus === "human" ? (
-                        <div className="inline-flex items-center gap-2 rounded-full bg-[#FFF7F2] px-3 py-2 text-sm">
+                        <div className="inline-flex items-center gap-2 rounded-full bg-[#FFF7F2] px-3 py-2 text-sm xl:px-2.5 xl:py-1.5 xl:text-[13px]">
                           <AlertTriangle className="h-4 w-4 text-[#B65221]" />
                           <ChatTimer statusChangeTime={activeChat.statusChangeTime} onExpire={() => toggleChatMode(activeChat.chatId)} />
                         </div>
@@ -613,7 +613,7 @@ export function ChatDashboard() {
                       <button
                         type="button"
                         onClick={() => toggleChatMode(activeChat.chatId)}
-                        className={`rounded-full px-4 py-2 text-sm font-medium ${
+                        className={`rounded-full px-4 py-2 text-sm font-medium xl:px-3 xl:py-1.5 xl:text-[13px] ${
                           activeChat.chatStatus === "bot" ? "bg-[#E8F4EC] text-[#2E6A46]" : "bg-[#FFF1EA] text-[#B65221]"
                         }`}
                       >
@@ -630,7 +630,7 @@ export function ChatDashboard() {
                         )}
                       </button>
                       {activeChat.chatStatus === "bot" ? (
-                        <button type="button" onClick={() => takeChatControl(activeChat.chatId)} className="rounded-full bg-brand-orange px-4 py-2 text-sm font-medium text-white">
+                        <button type="button" onClick={() => takeChatControl(activeChat.chatId)} className="rounded-full bg-brand-orange px-4 py-2 text-sm font-medium text-white xl:px-3 xl:py-1.5 xl:text-[13px]">
                           Tomar control
                         </button>
                       ) : null}
@@ -639,17 +639,17 @@ export function ChatDashboard() {
                 </div>
               </header>
 
-              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)] px-4 py-5 md:px-6">
+              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)] px-4 py-5 md:px-6 xl:px-4 xl:py-4">
                 {Object.keys(messageGroups)
                   .sort()
                   .map((dateKey) => (
-                    <div key={dateKey} className="mb-6">
-                      <div className="mb-4 flex justify-center">
+                    <div key={dateKey} className="mb-6 xl:mb-4">
+                      <div className="mb-4 flex justify-center xl:mb-3">
                         <span className="rounded-full border border-brand-line bg-white px-3 py-1 text-xs text-neutral-500">
                           {formatMessageDate(messageGroups[dateKey][0]?.timestamp)}
                         </span>
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-3 xl:space-y-2">
                         {messageGroups[dateKey].map((message, messageIndex) => {
                           const messageId = message.id || message._id || "";
                           const renderKey = `${messageId || `${message.chatId}-${message.sender}-${message.timestamp}`}-${messageIndex}`;
@@ -661,7 +661,7 @@ export function ChatDashboard() {
                           return (
                             <div key={renderKey} className={`flex ${message.sender === "bot" ? "justify-end" : "justify-start"}`}>
                               <div
-                                className={`group relative max-w-[82%] rounded-[24px] px-4 py-3 shadow-sm md:max-w-[70%] ${
+                                className={`group relative max-w-[82%] rounded-[24px] px-4 py-3 shadow-sm md:max-w-[70%] xl:rounded-[20px] xl:px-3 xl:py-2.5 ${
                                   message.sender === "user" ? "bg-white text-brand-ink" : "bg-brand-orange text-white"
                                 }`}
                               >
@@ -722,7 +722,7 @@ export function ChatDashboard() {
                                 !message.content.startsWith("?? ") ? (
                                   <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
                                 ) : null}
-                                <div className="mt-2 flex items-center justify-between gap-4">
+                                <div className="mt-2 flex items-center justify-between gap-4 xl:mt-1.5">
                                   <span className={`text-xs ${message.sender === "user" ? "text-neutral-400" : "text-white/75"}`}>
                                     {formatTime(message.timestamp)}
                                     {messageAuthorLabel ? ` · ${messageAuthorLabel}` : ""}
@@ -749,7 +749,7 @@ export function ChatDashboard() {
                   ))}
               </div>
 
-              <div className="border-t border-brand-line bg-[rgba(255,252,249,0.82)] px-4 py-4 backdrop-blur md:px-6">
+              <div className="border-t border-brand-line bg-[rgba(255,252,249,0.82)] px-4 py-4 backdrop-blur md:px-6 xl:px-4 xl:py-3">
                 {selectedFile ? (
                   <div className="mb-3 flex items-center gap-3 rounded-[20px] border border-[#E7DBCF] bg-[#F6EFE8] px-4 py-3">
                     {filePreview ? (
@@ -780,7 +780,7 @@ export function ChatDashboard() {
                 ) : null}
 
                 {activeChat.chatStatus === "human" ? (
-                  <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                  <form onSubmit={handleSendMessage} className="flex items-center gap-3 xl:gap-2">
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -791,7 +791,7 @@ export function ChatDashboard() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="rounded-full border border-[#E6D8CB] bg-[#FFF9F4] p-3 text-neutral-500 transition hover:border-[#D9C1AF] hover:bg-white hover:text-brand-ink"
+                      className="rounded-full border border-[#E6D8CB] bg-[#FFF9F4] p-3 text-neutral-500 transition hover:border-[#D9C1AF] hover:bg-white hover:text-brand-ink xl:p-2.5"
                       title="Adjuntar archivo"
                     >
                       <Paperclip className="h-4 w-4" />
@@ -802,25 +802,25 @@ export function ChatDashboard() {
                       onChange={(event) => setNewMessage(event.target.value)}
                       onPaste={handlePaste}
                       placeholder={selectedFile ? "Anadir mensaje opcional..." : "Escribir mensaje..."}
-                      className="min-w-0 flex-1 rounded-full border border-transparent bg-[#F4EEE7] px-5 py-3 text-sm text-brand-ink outline-none transition focus:border-[#E9D2C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(255,90,0,0.08)]"
+                      className="min-w-0 flex-1 rounded-full border border-transparent bg-[#F4EEE7] px-5 py-3 text-sm text-brand-ink outline-none transition focus:border-[#E9D2C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(255,90,0,0.08)] xl:px-4 xl:py-2.5"
                     />
                     <button
                       type="submit"
                       disabled={(!newMessage.trim() && !selectedFile) || isSendingFile}
-                      className="rounded-full bg-brand-orange p-3 text-white disabled:opacity-60"
+                      className="rounded-full bg-brand-orange p-3 text-white disabled:opacity-60 xl:p-2.5"
                     >
                       {isSendingFile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </button>
                   </form>
                 ) : (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 xl:gap-2">
                     <input
                       type="text"
                       disabled
                       value="Chat en modo automatico. Toma control para enviar mensajes."
-                      className="flex-1 rounded-full border border-transparent bg-[#EFE7DE] px-5 py-3 text-sm text-neutral-400"
+                      className="flex-1 rounded-full border border-transparent bg-[#EFE7DE] px-5 py-3 text-sm text-neutral-400 xl:px-4 xl:py-2.5"
                     />
-                    <button type="button" disabled className="rounded-full bg-neutral-300 p-3 text-white">
+                    <button type="button" disabled className="rounded-full bg-neutral-300 p-3 text-white xl:p-2.5">
                       <Send className="h-4 w-4" />
                     </button>
                   </div>

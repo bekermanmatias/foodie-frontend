@@ -203,18 +203,18 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
             ) : null}
           </div>
 
-          <div className={`${fillViewport ? "xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:p-5 2xl:p-6" : ""} min-h-[70vh] rounded-[28px] border border-white/70 bg-white p-4 shadow-[0_32px_70px_rgba(0,0,0,0.18)] sm:p-5 md:p-8 xl:rounded-[32px] 2xl:rounded-[36px]`}>
+          <div className={`${fillViewport ? "xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:rounded-[26px] xl:p-4 2xl:rounded-[30px] 2xl:p-5" : "xl:rounded-[32px] 2xl:rounded-[36px]"} min-h-[70vh] rounded-[28px] border border-white/70 bg-white p-4 shadow-[0_32px_70px_rgba(0,0,0,0.18)] sm:p-5 md:p-8`}>
             {hideIntro ? null : (
-              <div className={`${fillViewport ? "xl:shrink-0 xl:pb-4" : "pb-6 md:pb-7"} grid gap-4 border-b border-brand-line lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start`}>
+              <div className={`${fillViewport ? "xl:shrink-0 xl:gap-3 xl:pb-3" : "pb-6 md:pb-7"} grid gap-4 border-b border-brand-line lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start`}>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.42em] text-brand-orange md:text-xs md:tracking-[0.5em]">{workspaceLabel}</p>
-                  <h1 className={`${fillViewport ? "xl:mt-2 xl:text-4xl 2xl:text-5xl" : "md:mt-4 md:text-5xl 2xl:text-6xl"} mt-3 text-4xl font-extrabold tracking-[-0.06em] text-brand-ink`}>{title}</h1>
+                  <h1 className={`${fillViewport ? "xl:mt-1 xl:text-3xl 2xl:text-4xl" : "md:mt-4 md:text-5xl 2xl:text-6xl"} mt-3 text-4xl font-extrabold tracking-[-0.06em] text-brand-ink`}>{title}</h1>
                 </div>
                 <PageInfoTooltip description={description} />
               </div>
             )}
 
-            <div className={`${hideIntro ? "" : fillViewport ? "mt-4" : "mt-6"} ${fillViewport ? "xl:min-h-0 xl:flex-1" : ""} grid gap-6`}>{children}</div>
+            <div className={`${hideIntro ? "" : fillViewport ? "mt-3" : "mt-6"} ${fillViewport ? "xl:min-h-0 xl:flex-1" : ""} grid gap-6`}>{children}</div>
           </div>
         </main>
       </div>

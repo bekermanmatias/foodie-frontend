@@ -29,7 +29,7 @@ export function ChatSearchBar({
   }, [debouncedQuery, onSearch, onClear, query.length]);
 
   return (
-    <div className="border-b border-brand-line px-4 py-3">
+    <div className="border-b border-brand-line px-4 py-3 xl:px-3 xl:py-2">
       <div className="relative">
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
           {isSearching ? <Loader2 className="h-5 w-5 animate-spin text-neutral-400" /> : <Search className="h-5 w-5 text-neutral-400" />}
@@ -39,7 +39,7 @@ export function ChatSearchBar({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar por nombre o telefono..."
-          className="block w-full rounded-full border border-transparent bg-[#F4EEE7] py-2.5 pl-10 pr-10 text-sm placeholder-neutral-500 outline-none transition focus:border-[#E9D2C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(255,90,0,0.08)]"
+          className="block w-full rounded-full border border-transparent bg-[#F4EEE7] py-2.5 pl-10 pr-10 text-sm placeholder-neutral-500 outline-none transition focus:border-[#E9D2C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(255,90,0,0.08)] xl:py-2 xl:pl-9 xl:pr-9 xl:text-[13px]"
         />
         {query.length > 0 ? (
           <button

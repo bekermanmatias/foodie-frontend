@@ -37,8 +37,8 @@ export function ChatTagFilter({
   }, [availableTags]);
 
   return (
-    <div className="border-b border-brand-line px-4 py-3">
-      <div className="mb-2 flex items-center gap-2">
+    <div className="border-b border-brand-line px-4 py-3 xl:px-3 xl:py-2">
+      <div className="mb-2 flex items-center gap-2 xl:mb-1">
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">Filtrar por</span>
         {chatCount !== undefined ? <span className="text-xs text-neutral-500">({chatCount} chats)</span> : null}
       </div>
@@ -52,11 +52,11 @@ export function ChatTagFilter({
             <ChevronLeft className="h-4 w-4 text-brand-ink" />
           </button>
         ) : null}
-        <div ref={scrollContainerRef} className="flex gap-2 overflow-x-auto px-2 pb-2">
+        <div ref={scrollContainerRef} className="flex gap-2 overflow-x-auto px-2 pb-2 xl:gap-1.5 xl:pb-1">
           <button
             type="button"
             onClick={() => onTagSelect(null)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition ${selectedTag === null ? "bg-brand-orange text-white" : "bg-[#F4EEE7] text-brand-ink hover:bg-[#EEE4DA]"}`}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition xl:px-2.5 xl:py-1 xl:text-[13px] ${selectedTag === null ? "bg-brand-orange text-white" : "bg-[#F4EEE7] text-brand-ink hover:bg-[#EEE4DA]"}`}
           >
             Todas
           </button>
@@ -65,7 +65,7 @@ export function ChatTagFilter({
               key={tag.name}
               type="button"
               onClick={() => onTagSelect(tag.name)}
-              className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition"
+              className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition xl:px-2.5 xl:py-1 xl:text-[13px]"
               style={{
                 backgroundColor: selectedTag === tag.name ? tag.color : `${tag.color}22`,
                 color: selectedTag === tag.name ? "#ffffff" : tag.color
