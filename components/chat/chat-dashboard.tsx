@@ -417,11 +417,11 @@ export function ChatDashboard() {
   };
 
   return (
-    <div className="h-[78vh] min-h-[420px] overflow-hidden rounded-[28px] border border-[#E9DED3] bg-[linear-gradient(180deg,#FFFCF9_0%,#F8F4EE_100%)] xl:h-full xl:min-h-0 xl:rounded-[22px]">
+    <div className="chat-dashboard h-[78vh] min-h-[420px] overflow-hidden rounded-[28px] border border-[#E9DED3] bg-[linear-gradient(180deg,#FFFCF9_0%,#F8F4EE_100%)] xl:h-full xl:min-h-0 xl:rounded-[22px]">
       <Toaster position="top-right" richColors />
       <div className="flex h-full min-h-[420px] flex-col xl:min-h-0 xl:flex-row">
-        <section className={`${isMobile && !showMobileChatList ? "hidden" : "flex"} w-full shrink-0 flex-col border-b border-brand-line bg-[#FBF7F2] xl:w-[280px] xl:border-b-0 xl:border-r 2xl:w-[320px]`}>
-          <div className="border-b border-brand-line px-5 py-4 xl:px-4 xl:py-3">
+        <section className={`chat-inbox ${isMobile && !showMobileChatList ? "hidden" : "flex"} w-full shrink-0 flex-col border-b border-brand-line bg-[#FBF7F2] xl:w-[280px] xl:border-b-0 xl:border-r 2xl:w-[320px]`}>
+          <div className="chat-inbox-header border-b border-brand-line px-5 py-4 xl:px-4 xl:py-3">
             <div className="flex items-center justify-between gap-3 xl:gap-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-orange">Inbox operativo</p>
@@ -475,23 +475,23 @@ export function ChatDashboard() {
                       handleChatSelect(chat);
                     }
                   }}
-                  className={`group block w-full border-b border-[rgba(213,200,188,0.7)] px-4 py-4 text-left transition hover:bg-[#FFF8F1] xl:px-3 xl:py-3 ${activeChat?.chatId === chat.chatId ? "bg-[#FFF1E6]" : "bg-transparent"}`}
+                  className={`chat-row group block w-full border-b border-[rgba(213,200,188,0.7)] px-4 py-4 text-left transition hover:bg-[#FFF8F1] xl:px-3 xl:py-3 ${activeChat?.chatId === chat.chatId ? "bg-[#FFF1E6]" : "bg-transparent"}`}
                 >
                   <div className="flex items-start gap-3 xl:gap-2">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F2ECE5] text-sm font-semibold text-brand-ink xl:h-10 xl:w-10 xl:rounded-xl xl:text-xs">
+                    <div className="chat-contact-avatar flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F2ECE5] text-sm font-semibold text-brand-ink xl:h-10 xl:w-10 xl:rounded-xl xl:text-xs">
                       {getAvatarText(chat)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-brand-ink xl:text-[13px]">{chat.contactName || chat.phoneNumber}</p>
-                          <div className="mt-1 inline-flex items-center gap-1 text-xs text-neutral-500 xl:mt-0.5 xl:text-[11px]">
+                          <p className="chat-contact-name truncate text-sm font-semibold text-brand-ink xl:text-[13px]">{chat.contactName || chat.phoneNumber}</p>
+                          <div className="chat-contact-phone mt-1 inline-flex items-center gap-1 text-xs text-neutral-500 xl:mt-0.5 xl:text-[11px]">
                             <Phone className="h-3 w-3" />
                             {chat.phoneNumber}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-neutral-400 xl:text-[11px]">{formatChatDate(chat.lastMessageTimestamp)}</span>
+                          <span className="chat-contact-time text-xs text-neutral-400 xl:text-[11px]">{formatChatDate(chat.lastMessageTimestamp)}</span>
                           <button
                             type="button"
                             onClick={(event) => {
@@ -505,8 +505,8 @@ export function ChatDashboard() {
                           </button>
                         </div>
                       </div>
-                      <p className="mt-2 truncate text-sm text-neutral-500 xl:mt-1 xl:text-[13px]">{chat.lastMessage || "Sin mensajes recientes"}</p>
-                      <div className="mt-3 flex flex-wrap items-center gap-2 xl:mt-2 xl:gap-1.5">
+                      <p className="chat-contact-preview mt-2 truncate text-sm text-neutral-500 xl:mt-1 xl:text-[13px]">{chat.lastMessage || "Sin mensajes recientes"}</p>
+                      <div className="chat-row-metadata mt-3 flex flex-wrap items-center gap-2 xl:mt-2 xl:gap-1.5">
                         <span
                           className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] xl:px-2 xl:py-0.5 xl:text-[10px] ${
                             chat.chatStatus === "bot" ? "bg-[#E8F4EC] text-[#2E6A46]" : "bg-[#FFF1EA] text-[#B65221]"
@@ -524,7 +524,7 @@ export function ChatDashboard() {
                         ) : null}
                       </div>
                       {chat.tags?.length ? (
-                        <div className="mt-3 flex flex-wrap gap-2 xl:mt-2 xl:gap-1.5">
+                        <div className="chat-row-tags mt-3 flex flex-wrap gap-2 xl:mt-2 xl:gap-1.5">
                           {chat.tags.slice(0, 3).map((tagName) => {
                             const tag = tagService.getTag(tagName);
                             return <ChatTagBadge key={tagName} name={tagName} color={tag?.color || "#6B7280"} size="sm" />;
@@ -547,7 +547,7 @@ export function ChatDashboard() {
         <section className={`${isMobile && showMobileChatList ? "hidden" : "flex"} min-w-0 flex-1 flex-col`}>
           {activeChat ? (
             <>
-              <header className="relative z-10 border-b border-brand-line bg-[rgba(255,252,249,0.76)] px-4 py-4 backdrop-blur md:px-6 xl:px-4 xl:py-3">
+              <header className="chat-conversation-header relative z-10 border-b border-brand-line bg-[rgba(255,252,249,0.76)] px-4 py-4 backdrop-blur md:px-6 xl:px-4 xl:py-3">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between xl:gap-3">
                   <div className="flex min-w-0 items-start gap-3 xl:gap-2">
                     {isMobile ? (
@@ -559,12 +559,12 @@ export function ChatDashboard() {
                         <ArrowLeft className="h-4 w-4" />
                       </button>
                     ) : null}
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F2ECE5] text-sm font-semibold text-brand-ink xl:h-10 xl:w-10 xl:rounded-xl xl:text-xs">
+                    <div className="chat-active-avatar flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F2ECE5] text-sm font-semibold text-brand-ink xl:h-10 xl:w-10 xl:rounded-xl xl:text-xs">
                       {getAvatarText(activeChat)}
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate text-lg font-semibold text-brand-ink xl:text-base">{activeChat.contactName || activeChat.phoneNumber}</h3>
+                        <h3 className="chat-active-name truncate text-lg font-semibold text-brand-ink xl:text-base">{activeChat.contactName || activeChat.phoneNumber}</h3>
                         <span
                           className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] xl:px-2.5 xl:py-0.5 xl:text-[10px] ${
                             activeChat.chatStatus === "bot" ? "bg-[#E8F4EC] text-[#2E6A46]" : "bg-[#FFF1EA] text-[#B65221]"
@@ -639,7 +639,7 @@ export function ChatDashboard() {
                 </div>
               </header>
 
-              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)] px-4 py-5 md:px-6 xl:px-4 xl:py-4">
+              <div ref={messagesContainerRef} className="chat-messages flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)] px-4 py-5 md:px-6 xl:px-4 xl:py-4">
                 {Object.keys(messageGroups)
                   .sort()
                   .map((dateKey) => (
@@ -661,7 +661,7 @@ export function ChatDashboard() {
                           return (
                             <div key={renderKey} className={`flex ${message.sender === "bot" ? "justify-end" : "justify-start"}`}>
                               <div
-                                className={`group relative max-w-[82%] rounded-[24px] px-4 py-3 shadow-sm md:max-w-[70%] xl:rounded-[20px] xl:px-3 xl:py-2.5 ${
+                                className={`chat-message-bubble group relative max-w-[82%] rounded-[24px] px-4 py-3 shadow-sm md:max-w-[70%] xl:rounded-[20px] xl:px-3 xl:py-2.5 ${
                                   message.sender === "user" ? "bg-white text-brand-ink" : "bg-brand-orange text-white"
                                 }`}
                               >
@@ -749,7 +749,7 @@ export function ChatDashboard() {
                   ))}
               </div>
 
-              <div className="border-t border-brand-line bg-[rgba(255,252,249,0.82)] px-4 py-4 backdrop-blur md:px-6 xl:px-4 xl:py-3">
+              <div className="chat-composer border-t border-brand-line bg-[rgba(255,252,249,0.82)] px-4 py-4 backdrop-blur md:px-6 xl:px-4 xl:py-3">
                 {selectedFile ? (
                   <div className="mb-3 flex items-center gap-3 rounded-[20px] border border-[#E7DBCF] bg-[#F6EFE8] px-4 py-3">
                     {filePreview ? (
@@ -828,8 +828,8 @@ export function ChatDashboard() {
               </div>
             </>
           ) : (
-            <div className="flex flex-1 items-center justify-center bg-[radial-gradient(circle_at_top,#FFF1E6,transparent_48%),linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)]">
-              <div className="max-w-sm text-center">
+            <div className="chat-empty-state flex flex-1 items-center justify-center bg-[radial-gradient(circle_at_top,#FFF1E6,transparent_48%),linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)]">
+              <div className="chat-empty-content max-w-sm text-center">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF8F2] shadow-[0_10px_28px_rgba(31,31,33,0.06)]">
                   {isSearching ? <Search className="h-8 w-8 text-neutral-400" /> : <MoreHorizontal className="h-8 w-8 text-neutral-400" />}
                 </div>

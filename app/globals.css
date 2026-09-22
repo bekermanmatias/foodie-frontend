@@ -70,6 +70,83 @@ body {
   background: rgba(255, 255, 255, 0.58);
 }
 
+/* Densidad adicional sólo para Chat en notebooks de poca altura. */
+@media (min-width: 1280px) and (max-height: 800px) {
+  .workspace-chat-compact > div {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+
+  .workspace-chat-compact .workspace-sidebar-content { padding: 18px 14px; }
+  .workspace-chat-compact .workspace-sidebar-brand { gap: 8px; }
+  .workspace-chat-compact .workspace-sidebar .workspace-restaurant-avatar { height: 44px; width: 44px; }
+  .workspace-chat-compact .workspace-sidebar .workspace-restaurant-avatar img { height: 32px; width: 32px; }
+  .workspace-chat-compact .workspace-sidebar-brand p:first-child { font-size: 13px; }
+  .workspace-chat-compact .workspace-sidebar-brand p:last-child { font-size: 10px; }
+  .workspace-chat-compact .workspace-nav-scroll { margin-top: 18px; padding-right: 1px; }
+  .workspace-chat-compact .workspace-nav-scroll > * + * { margin-top: 4px; }
+  .workspace-chat-compact .workspace-side-item { gap: 8px; padding: 8px 12px; font-size: 12px; }
+  .workspace-chat-compact .workspace-side-child { padding: 5px 10px; font-size: 10px; }
+  .workspace-chat-compact .workspace-sidebar-branch { margin-top: 12px; border-radius: 14px; padding: 10px; }
+  .workspace-chat-compact .workspace-sidebar-branch p:first-child { font-size: 10px; }
+  .workspace-chat-compact .workspace-sidebar-branch p:last-child { margin-top: 5px; font-size: 12px; }
+  .workspace-chat-compact .workspace-sidebar-account { margin-top: 10px; padding: 10px 12px; }
+  .workspace-chat-compact .workspace-sidebar-account p,
+  .workspace-chat-compact .workspace-sidebar-account button { font-size: 10px; }
+
+  .workspace-chat-compact .workspace-main { padding: 10px; }
+  .workspace-chat-compact .workspace-content-card { border-radius: 18px; padding: 10px; }
+  .workspace-chat-compact .workspace-content-intro { gap: 6px; padding-bottom: 8px; }
+  .workspace-chat-compact .workspace-content-title { margin-top: 0; font-size: 26px; }
+  .workspace-chat-compact .workspace-content-body { margin-top: 8px; }
+
+  .workspace-chat-compact .chat-dashboard { border-radius: 16px; }
+  .workspace-chat-compact .chat-inbox { width: 256px; }
+  .workspace-chat-compact .chat-inbox-header { padding: 8px 10px; }
+  .workspace-chat-compact .chat-inbox-header > div { gap: 6px; }
+  .workspace-chat-compact .chat-inbox-header h2 { margin-top: 2px; font-size: 15px; }
+  .workspace-chat-compact .chat-inbox-header p { font-size: 10px; }
+  .workspace-chat-compact .chat-inbox-header button { padding: 7px; }
+  .workspace-chat-compact .chat-search-bar,
+  .workspace-chat-compact .chat-tag-filter { padding: 6px 10px; }
+  .workspace-chat-compact .chat-search-bar input { padding-top: 6px; padding-bottom: 6px; font-size: 12px; }
+  .workspace-chat-compact .chat-search-bar svg { height: 16px; width: 16px; }
+  .workspace-chat-compact .chat-tag-filter > div:first-child { margin-bottom: 3px; }
+  .workspace-chat-compact .chat-tag-filter span { font-size: 10px; }
+  .workspace-chat-compact .chat-tag-filter button { padding: 4px 8px; font-size: 11px; }
+  .workspace-chat-compact .chat-row { padding: 8px 10px; }
+  .workspace-chat-compact .chat-row > div { gap: 8px; }
+  .workspace-chat-compact .chat-contact-avatar { height: 32px; width: 32px; border-radius: 10px; font-size: 10px; }
+  .workspace-chat-compact .chat-contact-name,
+  .workspace-chat-compact .chat-contact-preview { font-size: 12px; }
+  .workspace-chat-compact .chat-contact-phone,
+  .workspace-chat-compact .chat-contact-time { margin-top: 1px; font-size: 10px; }
+  .workspace-chat-compact .chat-contact-preview { margin-top: 5px; }
+  .workspace-chat-compact .chat-row-metadata,
+  .workspace-chat-compact .chat-row-tags { margin-top: 6px; gap: 4px; }
+  .workspace-chat-compact .chat-row-metadata span { padding: 3px 6px; font-size: 9px; }
+  .workspace-chat-compact .chat-row-tags span { font-size: 9px; }
+
+  .workspace-chat-compact .chat-conversation-header { padding: 8px 10px; }
+  .workspace-chat-compact .chat-conversation-header > div { gap: 8px; }
+  .workspace-chat-compact .chat-active-avatar { height: 32px; width: 32px; border-radius: 10px; font-size: 10px; }
+  .workspace-chat-compact .chat-active-name { font-size: 14px; }
+  .workspace-chat-compact .chat-conversation-header p { margin-top: 1px; font-size: 11px; }
+  .workspace-chat-compact .chat-conversation-header button { padding: 6px 10px; font-size: 12px; }
+  .workspace-chat-compact .chat-messages { padding: 10px; }
+  .workspace-chat-compact .chat-messages > div { margin-bottom: 10px; }
+  .workspace-chat-compact .chat-message-bubble { border-radius: 16px; padding: 8px 10px; }
+  .workspace-chat-compact .chat-message-bubble p { font-size: 14px; line-height: 1.4; }
+  .workspace-chat-compact .chat-message-bubble > div:last-child { margin-top: 5px; }
+  .workspace-chat-compact .chat-composer { padding: 8px 10px; }
+  .workspace-chat-compact .chat-composer input { padding: 8px 12px; font-size: 14px; }
+  .workspace-chat-compact .chat-composer button { padding: 8px; }
+  .workspace-chat-compact .chat-empty-content { max-width: 280px; }
+  .workspace-chat-compact .chat-empty-content > div { height: 48px; width: 48px; }
+  .workspace-chat-compact .chat-empty-content > div svg { height: 24px; width: 24px; }
+  .workspace-chat-compact .chat-empty-content > p:first-of-type { margin-top: 12px; font-size: 18px; }
+  .workspace-chat-compact .chat-empty-content > p:last-child { margin-top: 5px; font-size: 12px; line-height: 1.5; }
+}
+
 .print-page {
   box-sizing: border-box;
   width: min(100%, 1120px);

@@ -37,7 +37,7 @@ export function ChatTagFilter({
   }, [availableTags]);
 
   return (
-    <div className="border-b border-brand-line px-4 py-3 xl:px-3 xl:py-2">
+    <div className="chat-tag-filter border-b border-brand-line px-4 py-3 xl:px-3 xl:py-2">
       <div className="mb-2 flex items-center gap-2 xl:mb-1">
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">Filtrar por</span>
         {chatCount !== undefined ? <span className="text-xs text-neutral-500">({chatCount} chats)</span> : null}

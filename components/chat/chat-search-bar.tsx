@@ -29,7 +29,7 @@ export function ChatSearchBar({
   }, [debouncedQuery, onSearch, onClear, query.length]);
 
   return (
-    <div className="border-b border-brand-line px-4 py-3 xl:px-3 xl:py-2">
+    <div className="chat-search-bar border-b border-brand-line px-4 py-3 xl:px-3 xl:py-2">
       <div className="relative">
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
           {isSearching ? <Loader2 className="h-5 w-5 animate-spin text-neutral-400" /> : <Search className="h-5 w-5 text-neutral-400" />}

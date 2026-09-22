@@ -14,6 +14,7 @@ export function ChatPage() {
       title="Chat y WhatsApp."
       description="Opera WhatsApp desde Foodie con una vista unificada de conversaciones, control manual, etiquetas y exportacion."
       fillViewport
+      compactShortDesktop
     >
       {chatSession.token ? (
         <ChatAuthProvider>
