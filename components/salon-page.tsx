@@ -420,6 +420,7 @@ export function SalonPage() {
   });
   const [combinationKeys, setCombinationKeys] = useState<string[]>([]);
   const [isSavingLayout, setIsSavingLayout] = useState(false);
+  const [layoutError, setLayoutError] = useState("");
   const [layoutImpact, setLayoutImpact] = useState<RoomLayoutImpact | null>(null);
   const [pendingLayoutPayload, setPendingLayoutPayload] = useState<LayoutPayload | null>(null);
   const [pendingTableDeletionSnapshot, setPendingTableDeletionSnapshot] = useState<DesignSnapshot | null>(null);
@@ -503,6 +504,7 @@ export function SalonPage() {
       resetHistory({ items: [], combinationKeys: [] });
       setHasUnsavedChanges(false);
       setLastSavedAt("");
+      setLayoutError("");
       return;
     }
 
@@ -519,6 +521,7 @@ export function SalonPage() {
     resetHistory(fallback);
     setHasUnsavedChanges(false);
     setLastSavedAt("");
+    setLayoutError("");
   }, [roomDetail, storageKey]);
 
   useEffect(() => {
@@ -1180,6 +1183,7 @@ export function SalonPage() {
   }
 
   async function deleteTableWithImpact(itemId: string) {
+    setLayoutError("");
     const tableId = editorItems.find((item) => item.id === itemId)?.tableId || itemId;
     const deletionSnapshot = createSnapshot();
     const nextEditorItems = editorItems.filter((item) => item.id !== itemId);
@@ -1201,7 +1205,7 @@ export function SalonPage() {
         setLayoutImpactFocusTableId("");
       }
     } catch (error) {
-      setLastSavedAt(error instanceof Error ? error.message : "No se pudo revisar el impacto de las reservas.");
+      setLayoutError(error instanceof Error ? error.message : "No se pudo revisar el impacto de las reservas.");
     } finally {
       setIsSavingLayout(false);
     }
@@ -1312,6 +1316,7 @@ export function SalonPage() {
   async function persistLayout(payload: LayoutPayload) {
     if (!selectedRoomId) return;
     setIsSavingLayout(true);
+    setLayoutError("");
 
     try {
       await saveRoomLayout(selectedRoomId, payload);
@@ -1325,7 +1330,7 @@ export function SalonPage() {
         })
       );
     } catch (error) {
-      setLastSavedAt(error instanceof Error ? error.message : "Error al guardar en backend");
+      setLayoutError(error instanceof Error ? error.message : "No pudimos guardar el salón. Tus cambios siguen en pantalla; intentá de nuevo.");
       throw error;
     } finally {
       setIsSavingLayout(false);
@@ -1337,7 +1342,7 @@ export function SalonPage() {
     try {
       setLayoutImpact(await loadRoomLayoutImpact(selectedRoomId, payload, layoutImpactFocusTableId || undefined));
     } catch (error) {
-      setLastSavedAt(error instanceof Error ? error.message : "No se pudo revisar el impacto de las reservas.");
+      setLayoutError(error instanceof Error ? error.message : "No se pudo revisar el impacto de las reservas.");
     }
   }
 
@@ -1356,6 +1361,7 @@ export function SalonPage() {
     if (isSavingLayout) return;
     const payload = buildLayoutPayload();
     if (!payload || !selectedRoomId) return;
+    setLayoutError("");
     setIsSavingLayout(true);
     try {
       const impact = await loadRoomLayoutImpact(selectedRoomId, payload);
@@ -1367,7 +1373,7 @@ export function SalonPage() {
       }
       await persistLayout(payload);
     } catch (error) {
-      setLastSavedAt(error instanceof Error ? error.message : "No se pudo revisar el impacto de las reservas.");
+      setLayoutError(error instanceof Error ? error.message : "No pudimos guardar el salón. Tus cambios siguen en pantalla; intentá de nuevo.");
     } finally {
       setIsSavingLayout(false);
     }
@@ -1642,6 +1648,7 @@ export function SalonPage() {
               </span>
             </div>
           </div>
+          {layoutError && !layoutImpact ? <p role="alert" className="border-b border-red-200 bg-red-50 px-5 py-3 text-sm font-medium text-red-700">{layoutError}</p> : null}
 
           <div className="grid xl:grid-cols-[minmax(0,1fr)_360px]">
             <div
@@ -2162,6 +2169,7 @@ export function SalonPage() {
         }
       >
         <div className="space-y-3">
+          {layoutError ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{layoutError}</p> : null}
           {layoutImpact?.reservations.map((item) => (
             <article key={item.reservation.id} className={`rounded-2xl border p-4 ${item.blocksLayout ? "border-red-300 bg-red-50" : item.requiresReassignment ? "border-amber-300 bg-amber-50" : "border-brand-line bg-white"}`}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

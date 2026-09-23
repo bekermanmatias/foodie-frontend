@@ -33,6 +33,21 @@ import type { ChatClientFeatureFlags } from "./chat/chat-feature-flags";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 const CHAT_API_URL = "https://chat.pupuia.com/api";
+const LAYOUT_SAVE_FALLBACK = "No pudimos guardar el salón. Tus cambios siguen en pantalla; intentá de nuevo.";
+
+function roomLayoutErrorMessage(error: unknown, fallback = LAYOUT_SAVE_FALLBACK): string {
+  if (!(error instanceof Error)) return fallback;
+  try {
+    const response = JSON.parse(error.message) as { statusCode?: number; message?: string | string[] };
+    const message = Array.isArray(response.message) ? response.message[0] : response.message;
+    if (response.statusCode === 401 || response.statusCode === 403) return "Tu sesión no permite guardar este salón. Volvé a ingresar e intentá de nuevo.";
+    if (response.statusCode === 404) return "Este salón ya no está disponible. Actualizá la página antes de continuar.";
+    if ([400, 409, 503].includes(response.statusCode || 0) && typeof message === "string" && message.trim()) return message;
+  } catch {
+    // Network errors and non-JSON responses use the same safe message.
+  }
+  return fallback;
+}
 
 type ChatSession = {
   token: string;
@@ -548,12 +563,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         method: "PUT",
         body: JSON.stringify(payload)
       });
-      await Promise.all([loadBootstrap(), loadRoomDetail()]);
+      const refresh = await Promise.allSettled([loadBootstrap(), loadRoomDetail()]);
+      if (refresh.some((result) => result.status === "rejected")) {
+        setFeedback("Plano guardado. No pudimos actualizar la vista; recargá la página para ver la versión guardada.");
+        return;
+      }
       setFeedback("Layout guardado");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "No se pudo guardar el layout";
+      const message = roomLayoutErrorMessage(error);
       setFeedback(message);
-      throw error;
+      throw new Error(message);
     }
   }
 
@@ -787,10 +806,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function loadRoomLayoutImpact(roomId: string, payload: unknown, focusTableId?: string) {
-    return api<RoomLayoutImpact>(`/restaurant/rooms/${roomId}/layout-impact`, {
-      method: "POST",
-      body: JSON.stringify(focusTableId ? { ...(payload as Record<string, unknown>), focusTableId } : payload)
-    });
+    try {
+      return await api<RoomLayoutImpact>(`/restaurant/rooms/${roomId}/layout-impact`, {
+        method: "POST",
+        body: JSON.stringify(focusTableId ? { ...(payload as Record<string, unknown>), focusTableId } : payload)
+      });
+    } catch (error) {
+      throw new Error(roomLayoutErrorMessage(error, "No pudimos revisar las reservas afectadas. Tus cambios siguen en pantalla; intentá de nuevo."));
+    }
   }
 
   async function cancelReservation(reservationId: string, reason?: string) {
