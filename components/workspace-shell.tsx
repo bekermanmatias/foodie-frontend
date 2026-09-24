@@ -103,7 +103,7 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
     currentUser?.role === "restaurant_owner"
       ? [...restaurantNavigationItems, { href: "/configuracion/personalizar", label: "Configuración", children: configurationItems }, { href: "/usuarios", label: "Usuarios" }]
       : isEvents ? eventsNavigationItems : isReception ? receptionNavigationItems : restaurantNavigationItems;
-  const giftCardNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && currentUser.role === "restaurant_owner" ? [{ href: "/gift-cards", label: "Gift Cards" }] : [];
+  const giftCardNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "host", "events"].includes(currentUser.role) ? [{ href: "/gift-cards", label: "Gift Cards" }] : [];
   const navigationItems: NavigationItem[] = currentUser?.scope === "platform" ? platformNavigationItems : [...restaurantBaseNavigationItems, ...giftCardNavigationItems, ...chatNavigationItems];
   const workspaceLabel = currentUser?.scope === "platform" ? "Administracion" : "Operacion";
   const workspaceName = currentUser?.scope === "platform" ? "Foodie AI" : bootstrap?.name || "Restaurante";

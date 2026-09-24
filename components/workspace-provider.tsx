@@ -389,7 +389,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!token || !currentUser) return;
 
     if (currentUser.scope === "restaurant" && ["host", "events"].includes(currentUser.role)) {
-      const receptionPaths = ["/panel", "/chat", "/salon", "/reservas"];
+      const receptionPaths = ["/panel", "/chat", "/salon", "/reservas", "/gift-cards"];
       const hasReceptionAccess = receptionPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
       if (!hasReceptionAccess) {
         router.replace("/panel");
