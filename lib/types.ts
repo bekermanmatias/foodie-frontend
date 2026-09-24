@@ -181,6 +181,7 @@ export type PlatformRestaurantSummary = {
   profileImageUrl?: string | null;
   isActive: boolean;
   chatModuleEnabled: boolean;
+  chatPhoneNumberId?: string | null;
   createdAt: string;
   branches: Array<{
     id: string;

@@ -21,6 +21,7 @@ type EditRestaurantFormState = {
   name: string;
   slug: string;
   profileImageUrl: string;
+  chatPhoneNumberId: string;
   branchName: string;
   branchId: string;
   isActive: boolean;
@@ -50,7 +51,7 @@ export function AdminRestaurantsPage() {
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [generatingApiKey, setGeneratingApiKey] = useState("");
   const [editingRestaurant, setEditingRestaurant] = useState<(typeof platformRestaurants)[number] | null>(null);
-  const [editForm, setEditForm] = useState<EditRestaurantFormState>({ name: "", slug: "", profileImageUrl: "", branchName: "", branchId: "", isActive: true });
+  const [editForm, setEditForm] = useState<EditRestaurantFormState>({ name: "", slug: "", profileImageUrl: "", chatPhoneNumberId: "", branchName: "", branchId: "", isActive: true });
   const [chatRestaurant, setChatRestaurant] = useState<(typeof platformRestaurants)[number] | null>(null);
   const [chatCredentials, setChatCredentials] = useState<ChatCredentialsFormState>({ email: "", password: "" });
   const [savingChatCredentials, setSavingChatCredentials] = useState(false);
@@ -114,7 +115,7 @@ export function AdminRestaurantsPage() {
   function openEditRestaurant(restaurant: (typeof platformRestaurants)[number]) {
     setEditingRestaurant(restaurant);
     const branch = restaurant.branches[0];
-    setEditForm({ name: restaurant.name, slug: restaurant.slug, profileImageUrl: restaurant.profileImageUrl || "", branchName: branch?.name || "", branchId: branch?.id || "", isActive: restaurant.isActive });
+    setEditForm({ name: restaurant.name, slug: restaurant.slug, profileImageUrl: restaurant.profileImageUrl || "", chatPhoneNumberId: restaurant.chatPhoneNumberId || "", branchName: branch?.name || "", branchId: branch?.id || "", isActive: restaurant.isActive });
   }
 
   async function submitEditRestaurant() {
@@ -454,6 +455,11 @@ export function AdminRestaurantsPage() {
           <label className="block space-y-2 text-sm text-brand-ink">
             <span className="font-medium">Slug público</span>
             <input value={editForm.slug} onChange={(event) => setEditForm((current) => ({ ...current, slug: event.target.value }))} className="w-full rounded-2xl border border-brand-line px-4 py-3 outline-none focus:border-brand-orange" />
+          </label>
+          <label className="block space-y-2 text-sm text-brand-ink">
+            <span className="font-medium">WhatsApp Phone Number ID</span>
+            <input value={editForm.chatPhoneNumberId} onChange={(event) => setEditForm((current) => ({ ...current, chatPhoneNumberId: event.target.value }))} placeholder="Ej: 1357479224108088" className="w-full rounded-2xl border border-brand-line px-4 py-3 outline-none focus:border-brand-orange" />
+            <span className="text-xs text-neutral-500">ID del número de WhatsApp (Meta) del restaurante. Se usa para enviar las Gift Cards por chat.</span>
           </label>
           <label className="flex items-center gap-3 text-sm text-brand-ink">
             <input type="checkbox" checked={editForm.isActive} onChange={(event) => setEditForm((current) => ({ ...current, isActive: event.target.checked }))} className="h-4 w-4 accent-brand-orange" />

@@ -297,6 +297,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           const detail = await api<PlatformRestaurantDetail>(`/platform/restaurants/${restaurant.id}`);
           return {
             ...restaurant,
+            chatPhoneNumberId: detail.chatPhoneNumberId ?? null,
             branches: detail.branches.map((branch) => ({
               id: branch.id,
               name: branch.name,
@@ -910,7 +911,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   async function updatePlatformRestaurant(
     restaurantId: string,
-    input: { name?: string; slug?: string; profileImageUrl?: string | null; isActive?: boolean }
+    input: { name?: string; slug?: string; profileImageUrl?: string | null; isActive?: boolean; chatPhoneNumberId?: string | null }
   ) {
     try {
       await api(`/platform/restaurants/${restaurantId}`, { method: "PATCH", body: JSON.stringify(input) });
