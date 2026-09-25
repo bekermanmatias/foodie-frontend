@@ -15,6 +15,9 @@ const config: Config = {
       boxShadow: {
         panel: "0 18px 40px rgba(31, 31, 33, 0.08)"
       },
+      fontFamily: {
+        display: ["var(--font-display)", "ui-serif", "Georgia", "serif"]
+      },
       borderRadius: {
         panel: "24px"
       }
