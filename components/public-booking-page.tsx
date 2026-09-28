@@ -254,7 +254,6 @@ export function PublicBookingPage({ restaurantSlug }: { restaurantSlug: string }
   const continueBooking = async () => {
     setError("");
     if (step === 1 && !branch) return setError("Eleg\u00ed una sede para continuar.");
-    if (step === 1 && profile?.largePartyThreshold && partySize > profile.largePartyThreshold) return setError("Para grupos grandes, escribinos por WhatsApp y coordinamos tu reserva.");
     if (step === 2 && !date) return setError("Eleg\u00ed una fecha para continuar.");
     if (step === 3) {
       if (!time) return setError("Eleg\u00ed un horario disponible.");
