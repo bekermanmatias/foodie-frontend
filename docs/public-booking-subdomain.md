@@ -1,6 +1,6 @@
 # Subdominio del portal público
 
-El portal de reservas público se publica en `https://reservar.foodieia.com.ar/r/<slug-del-restaurante>`.
+El portal de reservas público se publica en `https://reservar.foodieia.com.ar/<slug-del-restaurante>`.
 El workspace de Foodie no se expone desde ese host: Nginx solo deja pasar la ruta de reservas y los recursos estáticos que Next.js necesita.
 
 ## Variable de entorno del frontend
@@ -23,13 +23,20 @@ server {
     listen [::]:80;
     server_name reservar.foodieia.com.ar;
 
-    # La URL pública /r/<slug> se resuelve internamente como /reservar/<slug>.
-    location ~ ^/r/([a-z0-9-]+)/?$ {
-        rewrite ^/r/([a-z0-9-]+)/?$ /reservar/$1 last;
+    # Nunca publicar rutas del workspace desde este dominio.
+    location = / { return 404; }
+    location ~ ^/(admin|api|chat|clientes|configuracion|gift-cards|imprimir-reservas|panel|reservas|reservas-online|salon|usuarios)(/|$) {
+        return 404;
     }
 
-    # También conserva compatibilidad con enlaces /reservar/<slug> ya compartidos.
+    # La URL pública /<slug> se resuelve internamente como /reservar/<slug>.
+    location ~ ^/([a-z0-9-]+)/?$ {
+        rewrite ^/([a-z0-9-]+)/?$ /reservar/$1 last;
+    }
+
+    # Destino interno de la reescritura anterior; no expone una URL pública /reservar/.
     location ^~ /reservar/ {
+        internal;
         proxy_pass http://127.0.0.1:3003;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -74,7 +81,7 @@ sudo systemctl reload nginx
 ## Verificación posterior
 
 ```bash
-curl -I https://reservar.foodieia.com.ar/r/<slug-del-restaurante>
+curl -I https://reservar.foodieia.com.ar/<slug-del-restaurante>
 curl -I https://reservar.foodieia.com.ar/panel
 ```
 
