@@ -5,6 +5,7 @@ import { FoodieSelect } from "./foodie-select";
 import { AppModal } from "./app-modal";
 import { ConfirmDialog } from "./confirm-dialog";
 import { ReservationTableReassignModal } from "./reservation-table-reassign-modal";
+import { EventReservationEditModal } from "./event-reservation-edit-modal";
 import { WorkspaceShell } from "./workspace-shell";
 import { useWorkspace } from "./workspace-provider";
 import { totalTableCapacity } from "../lib/table-capacity";
@@ -137,6 +138,7 @@ export function PanelPage() {
   const [openMenuTableId, setOpenMenuTableId] = useState("");
   const [detailReservationId, setDetailReservationId] = useState("");
   const [reassignReservationId, setReassignReservationId] = useState("");
+  const [editEventReservationId, setEditEventReservationId] = useState("");
   const [cancelReservationId, setCancelReservationId] = useState("");
   const [cancelReason, setCancelReason] = useState("");
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -182,12 +184,16 @@ export function PanelPage() {
   const reassignReservation = reassignReservationId
     ? reservations.find((reservation) => reservation.id === reassignReservationId) || null
     : null;
+  const editEventReservation = editEventReservationId
+    ? reservations.find((reservation) => reservation.id === editEventReservationId) || null
+    : null;
   const cancelTarget = cancelReservationId
     ? reservations.find((reservation) => reservation.id === cancelReservationId) || null
     : null;
   const selectedReservationTableIds = new Set(detailReservation?.tables.map((link) => link.table.id) || []);
   const detailReservationCapacity = totalTableCapacity(detailReservation?.tables.map((link) => link.table) || []);
   const canCancelReservations = ["restaurant_owner", "restaurant_manager"].includes(currentUser?.role || "");
+  const canEditEvents = ["restaurant_owner", "restaurant_manager", "events"].includes(currentUser?.role || "");
   const canOperateDetailReservation = Boolean(detailReservation && !isSelectedRoomBlocked && ["pending", "confirmed", "seated"].includes(detailReservation.status));
   const selectedSpecialService = specialServices.find((service) => service.id === selectedSpecialServiceId) || null;
   const specialServicesForSelectedTurn = specialServices.filter((service) => (Number(service.startTime.slice(0, 2)) < 17 ? "mediodia" : "noche") === selectedTurn);
@@ -517,6 +523,7 @@ export function PanelPage() {
       </section>
 
       <ReservationTableReassignModal reservation={reassignReservation} onClose={() => setReassignReservationId("")} />
+      <EventReservationEditModal reservation={editEventReservation} onClose={() => setEditEventReservationId("")} />
 
       <AppModal
         open={createOpen}
@@ -571,7 +578,7 @@ export function PanelPage() {
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
                 {["pending", "confirmed"].includes(detailReservation.status) ? <button type="button" disabled={detailActionLoading} onClick={() => void moveDetailReservation("check-in")} className="rounded-full bg-[#8A5B00] px-4 py-3 text-sm font-medium text-white disabled:opacity-60">{detailActionLoading ? "Actualizando..." : "Check-in"}</button> : null}
                 {detailReservation.status === "seated" ? <button type="button" disabled={detailActionLoading} onClick={() => void moveDetailReservation("release")} className="rounded-full bg-[#146C37] px-4 py-3 text-sm font-medium text-white disabled:opacity-60">{detailActionLoading ? "Actualizando..." : "Liberar mesas"}</button> : null}
-                {["pending", "confirmed"].includes(detailReservation.status) ? <button type="button" disabled={detailActionLoading} onClick={() => { setReassignReservationId(detailReservation.id); setDetailReservationId(""); }} className="rounded-full border border-brand-orange px-4 py-3 text-sm font-medium text-brand-orange disabled:opacity-60">Cambiar mesas</button> : null}
+                {["pending", "confirmed"].includes(detailReservation.status) ? (detailReservation.eventRoomAssignments?.length ? (canEditEvents ? <button type="button" disabled={detailActionLoading} onClick={() => { setEditEventReservationId(detailReservation.id); setDetailReservationId(""); }} className="rounded-full border border-brand-orange px-4 py-3 text-sm font-medium text-brand-orange disabled:opacity-60">Editar evento</button> : null) : <button type="button" disabled={detailActionLoading} onClick={() => { setReassignReservationId(detailReservation.id); setDetailReservationId(""); }} className="rounded-full border border-brand-orange px-4 py-3 text-sm font-medium text-brand-orange disabled:opacity-60">Cambiar mesas</button>) : null}
                 {canCancelReservations ? <button type="button" disabled={detailActionLoading} onClick={() => { setCancelReason(""); setDetailActionError(""); setCancelReservationId(detailReservation.id); setDetailReservationId(""); }} className="rounded-full border border-red-200 px-4 py-3 text-sm font-medium text-red-700 disabled:opacity-60">Cancelar reserva</button> : null}
               </div>
             ) : null}

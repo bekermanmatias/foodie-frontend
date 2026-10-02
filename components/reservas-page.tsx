@@ -8,6 +8,7 @@ import { AppModal } from "./app-modal";
 import { ConfirmDialog } from "./confirm-dialog";
 import { FoodieSelect } from "./foodie-select";
 import { ReservationTableReassignModal } from "./reservation-table-reassign-modal";
+import { EventReservationEditModal } from "./event-reservation-edit-modal";
 import { WorkspaceShell } from "./workspace-shell";
 import { useWorkspace } from "./workspace-provider";
 import { tableCapacity, totalTableCapacity } from "../lib/table-capacity";
@@ -61,6 +62,10 @@ function reservationRoomsLabel(reservation: Reservation) {
   return reservation.eventRoomAssignments.map((assignment) => `${assignment.room.name} (${assignment.allocatedCovers})`).join(" · ");
 }
 
+function isEventReservation(reservation: Reservation) {
+  return Boolean(reservation.eventRoomAssignments?.length);
+}
+
 export function ReservasPage() {
   const {
     reservations,
@@ -91,6 +96,7 @@ export function ReservasPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [reassignReservation, setReassignReservation] = useState<Reservation | null>(null);
+  const [editEventReservation, setEditEventReservation] = useState<Reservation | null>(null);
   const [formError, setFormError] = useState("");
   const [tableOptions, setTableOptions] = useState<import("../lib/types").ReservationTableOption[]>([]);
   const [manualTableOptions, setManualTableOptions] = useState<ManualReservationTableOption[]>([]);
@@ -558,13 +564,25 @@ export function ReservasPage() {
                         </button>
                       </> : null}
                       {canOperateReservations && ["pending", "confirmed"].includes(reservation.status) ? (
-                        <button
-                          type="button"
-                          onClick={() => setReassignReservation(reservation)}
-                          className="rounded-full border border-brand-orange px-3 py-2 text-xs font-medium text-brand-orange"
-                        >
-                          Cambiar mesa
-                        </button>
+                        isEventReservation(reservation) ? (
+                          canCreateEvents ? (
+                            <button
+                              type="button"
+                              onClick={() => setEditEventReservation(reservation)}
+                              className="rounded-full border border-brand-orange px-3 py-2 text-xs font-medium text-brand-orange"
+                            >
+                              Editar evento
+                            </button>
+                          ) : null
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setReassignReservation(reservation)}
+                            className="rounded-full border border-brand-orange px-3 py-2 text-xs font-medium text-brand-orange"
+                          >
+                            Cambiar mesa
+                          </button>
+                        )
                       ) : null}
                       {canRescheduleReservations && ["pending", "confirmed"].includes(reservation.status) ? (
                         <button type="button" onClick={() => { setRescheduleError(""); setRescheduleDate(reservation.serviceDate.slice(0, 10)); setRescheduleTarget(reservation); }} className="rounded-full border border-brand-orange px-3 py-2 text-xs font-medium text-brand-orange">
@@ -786,6 +804,7 @@ export function ReservasPage() {
       ) : null}
 
       <ReservationTableReassignModal reservation={reassignReservation} onClose={() => setReassignReservation(null)} />
+      <EventReservationEditModal reservation={editEventReservation} onClose={() => setEditEventReservation(null)} />
 
       <AppModal
         open={Boolean(mobileActionReservation)}
@@ -795,7 +814,7 @@ export function ReservasPage() {
         widthClassName="max-w-sm"
       >
         <div className="grid gap-3">
-          {canOperateReservations && ["pending", "confirmed"].includes(mobileActionReservation?.status || "") ? <button type="button" onClick={() => { setReassignReservation(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-brand-orange px-4 py-3 text-sm font-semibold text-brand-orange">Cambiar mesas</button> : null}
+          {canOperateReservations && mobileActionReservation && ["pending", "confirmed"].includes(mobileActionReservation.status) ? (isEventReservation(mobileActionReservation) ? (canCreateEvents ? <button type="button" onClick={() => { setEditEventReservation(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-brand-orange px-4 py-3 text-sm font-semibold text-brand-orange">Editar evento</button> : null) : <button type="button" onClick={() => { setReassignReservation(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-brand-orange px-4 py-3 text-sm font-semibold text-brand-orange">Cambiar mesas</button>) : null}
           {canRescheduleReservations && mobileActionReservation && ["pending", "confirmed"].includes(mobileActionReservation.status) ? <button type="button" onClick={() => { setRescheduleError(""); setRescheduleDate(mobileActionReservation.serviceDate.slice(0, 10)); setRescheduleTarget(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-brand-orange px-4 py-3 text-sm font-semibold text-brand-orange">Cambiar fecha</button> : null}
           {canOperateReservations && canCancelReservations && mobileActionReservation && ["pending", "confirmed", "seated"].includes(mobileActionReservation.status) ? <button type="button" onClick={() => { setCancelError(""); setCancelReason(""); setCancelTarget(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-red-200 px-4 py-3 text-sm font-semibold text-red-700">Cancelar reserva</button> : null}
           {canOperateReservations && canDeleteReservations && mobileActionReservation?.status === "cancelled" ? <button type="button" onClick={() => { setDeleteError(""); setDeleteTarget(mobileActionReservation); setMobileActionReservation(null); }} className="rounded-full border border-red-200 px-4 py-3 text-sm font-semibold text-red-700">Eliminar reserva</button> : null}

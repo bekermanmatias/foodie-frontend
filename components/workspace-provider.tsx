@@ -110,6 +110,19 @@ type WorkspaceContextValue = {
   createReservation: () => Promise<void>;
   moveReservation: (reservationId: string, action: "check-in" | "release") => Promise<void>;
   rescheduleReservation: (reservationId: string, serviceDate: string) => Promise<Reservation>;
+  updateEventReservation: (
+    reservationId: string,
+    input: {
+      fullName?: string;
+      phone?: string;
+      email?: string | null;
+      partySize?: number;
+      serviceDate?: string;
+      serviceTime?: string;
+      notes?: string | null;
+      rooms?: Array<{ roomId: string; allocatedCovers: number; usage: "partial" | "full" }>;
+    }
+  ) => Promise<Reservation>;
   cancelReservation: (reservationId: string, reason?: string) => Promise<Reservation>;
   deleteReservation: (reservationId: string) => Promise<void>;
   loadReservationTableOptions: (reservationId: string) => Promise<ReservationTableOption[]>;
@@ -849,6 +862,34 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function updateEventReservation(
+    reservationId: string,
+    input: {
+      fullName?: string;
+      phone?: string;
+      email?: string | null;
+      partySize?: number;
+      serviceDate?: string;
+      serviceTime?: string;
+      notes?: string | null;
+      rooms?: Array<{ roomId: string; allocatedCovers: number; usage: "partial" | "full" }>;
+    }
+  ) {
+    try {
+      const updated = await api<Reservation>(`/restaurant/reservations/${reservationId}/event`, {
+        method: "POST",
+        body: JSON.stringify(input)
+      });
+      await loadOperationalData();
+      setFeedback("Evento actualizado");
+      return updated;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo actualizar el evento";
+      setFeedback(message);
+      throw new Error(message);
+    }
+  }
+
   async function deleteReservation(reservationId: string) {
     try {
       await api(`/restaurant/reservations/${reservationId}`, { method: "DELETE" });
@@ -1168,6 +1209,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       createReservation,
       moveReservation,
       rescheduleReservation,
+      updateEventReservation,
       cancelReservation,
       deleteReservation,
       loadReservationTableOptions,
