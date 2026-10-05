@@ -249,7 +249,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(text || "Request failed");
+      let message: string | undefined;
+      try {
+        const body = JSON.parse(text) as { message?: string | string[] };
+        message = Array.isArray(body.message) ? body.message.join(" · ") : body.message;
+      } catch {
+        message = text || undefined;
+      }
+      throw new Error(response.status >= 500
+        ? path === "/restaurant/reservations" || path === "/restaurant/reservations/events"
+          ? "No se pudo confirmar la reserva. Revisá la lista antes de volver a intentar; si continúa, contactá a soporte."
+          : "Ocurrió un error en el servidor. Intentá nuevamente o contactá a soporte."
+        : message || "No se pudo completar la operación.");
     }
 
     return response.json();

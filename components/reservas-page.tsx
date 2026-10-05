@@ -95,6 +95,7 @@ export function ReservasPage() {
   } = useWorkspace();
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [creatingReservation, setCreatingReservation] = useState(false);
   const [reassignReservation, setReassignReservation] = useState<Reservation | null>(null);
   const [editEventReservation, setEditEventReservation] = useState<Reservation | null>(null);
   const [formError, setFormError] = useState("");
@@ -133,14 +134,27 @@ export function ReservasPage() {
   const selectedBranch = bootstrap?.branches.find((branch) => branch.id === selectedBranchId);
   const selectedSpecialService = specialServices.find((service) => service.id === selectedSpecialServiceId) || null;
   const specialServicesForSelectedTurn = specialServices.filter((service) => (Number(service.startTime.slice(0, 2)) < 17 ? "mediodia" : "noche") === selectedTurn);
-  const isEventsUser = currentUser?.role === "events";
   const canOperateReservations = true;
-  const canDeleteReservations = ["restaurant_owner", "restaurant_manager"].includes(currentUser?.role || "");
+  const canDeleteReservations = ["restaurant_owner", "restaurant_manager", "events"].includes(currentUser?.role || "");
   const canCancelReservations = ["restaurant_owner", "restaurant_manager", "host", "events"].includes(currentUser?.role || "");
   const canRescheduleReservations = ["restaurant_owner", "restaurant_manager", "host", "events"].includes(currentUser?.role || "");
   const canCreateEvents = ["restaurant_owner", "restaurant_manager", "events"].includes(currentUser?.role || "");
   const eventAllocatedCovers = reservationForm.eventRooms.reduce((total, room) => total + (Number(room.allocatedCovers) || 0), 0);
   const eventTotalCovers = Number(reservationForm.partySize) || 0;
+  const eventService = specialServices.find((service) => service.startTime === reservationForm.serviceTime);
+  const eventTurn = Number(reservationForm.serviceTime.slice(0, 2)) < 17 ? "mediodia" : "noche";
+  const eventRoomConflicts = reservations.filter((reservation) =>
+    ["pending", "confirmed", "seated"].includes(reservation.status) &&
+    eventTurn === selectedTurn &&
+    (!selectedSpecialServiceId || selectedSpecialServiceId === eventService?.id) &&
+    reservation.turn === eventTurn &&
+    (reservation.specialService?.id || null) === (eventService?.id || null)
+  );
+  const occupiedEventRoomIds = new Set(eventRoomConflicts.flatMap((reservation) =>
+    reservation.eventRoomAssignments?.length
+      ? reservation.eventRoomAssignments.map((assignment) => assignment.roomId)
+      : [reservation.room.id]
+  ));
   const eventDistributionStatus = eventAllocatedCovers === eventTotalCovers
     ? "complete"
     : eventAllocatedCovers > eventTotalCovers
@@ -240,13 +254,11 @@ export function ReservasPage() {
 
   const openCreateReservation = () => {
     setFormError("");
-    if (isEventsUser) {
-      setReservationForm((current) => ({ ...current, reservationKind: "event", selectedTableIds: [], tableSelectionMode: "automatic", eventRooms: current.eventRooms.length ? current.eventRooms : [] }));
-    }
     setCreateOpen(true);
   };
 
   const handleCreate = async () => {
+    if (creatingReservation) return;
     setFormError("");
 
     if (!reservationForm.fullName.trim() || !reservationForm.phone.trim()) {
@@ -264,6 +276,10 @@ export function ReservasPage() {
       return;
     }
     if (reservationForm.reservationKind === "event") {
+      if (reservationForm.eventRooms.some((room) => occupiedEventRoomIds.has(room.roomId))) {
+        setFormError("Uno de los salones elegidos ya tiene una reserva activa para este servicio. Elegí otro salón o servicio.");
+        return;
+      }
       if (!reservationForm.eventRooms.length) {
         setFormError("ElegÃ­ al menos un salÃ³n para el evento.");
         return;
@@ -279,10 +295,13 @@ export function ReservasPage() {
     }
 
     try {
+      setCreatingReservation(true);
       await createReservation();
       setCreateOpen(false);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "No se pudo crear la reserva.");
+    } finally {
+      setCreatingReservation(false);
     }
   };
 
@@ -886,8 +905,8 @@ export function ReservasPage() {
             >
               Cancelar
             </button>
-            <button type="button" onClick={() => void handleCreate()} className="flex-1 rounded-full bg-brand-orange px-4 py-3 text-sm font-medium text-white">
-              Crear reserva
+            <button type="button" disabled={creatingReservation} onClick={() => void handleCreate()} className="flex-1 rounded-full bg-brand-orange px-4 py-3 text-sm font-medium text-white disabled:opacity-50">
+              {creatingReservation ? "Creando reserva..." : "Crear reserva"}
             </button>
           </>
         }
@@ -952,7 +971,7 @@ export function ReservasPage() {
               className="w-full rounded-2xl border border-brand-line px-4 py-3 outline-none focus:border-brand-orange"
             />
           </label>
-          {canCreateEvents && !isEventsUser ? <div className="space-y-2 text-sm text-brand-ink md:col-span-2">
+          {canCreateEvents ? <div className="space-y-2 text-sm text-brand-ink md:col-span-2">
             <span className="font-medium">Tipo de reserva</span>
             <div className="grid gap-2 sm:grid-cols-2">
               <button type="button" onClick={() => setReservationForm((current) => ({ ...current, reservationKind: "standard", eventRooms: [] }))} className={`rounded-2xl border px-4 py-3 text-left ${reservationForm.reservationKind === "standard" ? "border-brand-orange bg-[#FFF4ED]" : "border-brand-line bg-white"}`}>
@@ -962,7 +981,7 @@ export function ReservasPage() {
                 <span className="block font-semibold">Reserva de evento</span><span className="text-xs text-neutral-500">Distribuí grupos grandes entre varios salones.</span>
               </button>
             </div>
-          </div> : isEventsUser ? <p className="text-sm font-medium text-brand-ink md:col-span-2">Tipo de reserva: evento</p> : null}
+          </div> : null}
           {reservationForm.reservationKind === "event" ? <div className="space-y-4 rounded-2xl border border-brand-orange bg-[#FFF9F5] p-4 text-sm text-brand-ink md:col-span-2">
             <div className="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-start">
               <div className="min-w-0 flex-1"><p className="font-semibold text-brand-ink">Salones del evento</p><p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-700">Seleccioná los salones y distribuí manualmente los cubiertos. Cada salón elegido queda bloqueado para reservas normales en este servicio.</p></div>
@@ -976,8 +995,9 @@ export function ReservasPage() {
               {(selectedBranch?.rooms || []).map((room) => {
                 const assignment = reservationForm.eventRooms.find((item) => item.roomId === room.id);
                 const capacity = totalTableCapacity(room.tables);
+                const occupied = occupiedEventRoomIds.has(room.id);
                 return <div key={room.id} className={`rounded-xl border p-3 transition-colors ${assignment ? "border-brand-orange bg-[#FFF9F5] shadow-[0_0_0_1px_rgba(255,90,31,0.12)]" : "border-brand-line bg-white"}`}>
-                  <label className="flex cursor-pointer items-start gap-3 text-brand-ink"><input aria-label={`Seleccionar ${room.name}`} className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#FF5A1F]" type="checkbox" checked={Boolean(assignment)} onChange={(event) => setReservationForm((current) => ({ ...current, eventRooms: event.target.checked ? [...current.eventRooms, { roomId: room.id, allocatedCovers: "", usage: "partial" }] : current.eventRooms.filter((item) => item.roomId !== room.id) }))} /><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-brand-ink">{room.name}</span><span className="mt-1 block text-xs leading-relaxed text-neutral-700">Capacidad nominal: {capacity} cubiertos.</span></span></label>
+                  <label className="flex cursor-pointer items-start gap-3 text-brand-ink"><input aria-label={`Seleccionar ${room.name}`} className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#FF5A1F]" type="checkbox" checked={Boolean(assignment)} disabled={occupied && !assignment} onChange={(event) => setReservationForm((current) => ({ ...current, eventRooms: event.target.checked ? [...current.eventRooms, { roomId: room.id, allocatedCovers: "", usage: "partial" }] : current.eventRooms.filter((item) => item.roomId !== room.id) }))} /><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-brand-ink">{room.name}</span><span className="mt-1 block text-xs leading-relaxed text-neutral-700">Capacidad nominal: {capacity} cubiertos.{occupied ? " Ya tiene una reserva activa en este servicio." : ""}</span></span></label>
                   {assignment ? <div className="mt-3 grid gap-3 rounded-xl border border-[#F2D8CA] bg-white p-3 sm:grid-cols-2"><label className="space-y-1"><span className="block text-xs font-bold text-brand-ink">Cubiertos asignados</span><span className="block text-[11px] leading-relaxed text-neutral-700">Personas de este evento que se ubicarán en {room.name}.</span><input type="number" min={1} inputMode="numeric" value={assignment.allocatedCovers} placeholder="Ej. 40" onChange={(event) => setReservationForm((current) => ({ ...current, eventRooms: current.eventRooms.map((item) => item.roomId === room.id ? { ...item, allocatedCovers: event.target.value } : item) }))} className="w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-brand-ink placeholder:text-neutral-500" /></label><label className="space-y-1"><span className="block text-xs font-bold text-brand-ink">Uso físico del salón</span><span className="block text-[11px] leading-relaxed text-neutral-700">Parcial usa una zona; total usa el salón completo. Ambos bloquean reservas normales.</span><FoodieSelect value={assignment.usage} onChange={(event) => setReservationForm((current) => ({ ...current, eventRooms: current.eventRooms.map((item) => item.roomId === room.id ? { ...item, usage: event.target.value as "partial" | "full" } : item) }))}><option value="partial">Parcial</option><option value="full">Total</option></FoodieSelect></label></div> : null}
                 </div>;
               })}
