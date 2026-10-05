@@ -107,7 +107,7 @@ type WorkspaceContextValue = {
   deleteRoom: (roomId: string) => Promise<void>;
   saveRoomLayout: (roomId: string, payload: unknown) => Promise<void>;
   loadRoomLayoutImpact: (roomId: string, payload: unknown, focusTableId?: string) => Promise<RoomLayoutImpact>;
-  createReservation: () => Promise<void>;
+  createReservation: (allowEventRoomConflict?: boolean) => Promise<void>;
   moveReservation: (reservationId: string, action: "check-in" | "release") => Promise<void>;
   rescheduleReservation: (reservationId: string, serviceDate: string) => Promise<Reservation>;
   updateEventReservation: (
@@ -601,7 +601,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function createReservation() {
+  async function createReservation(allowEventRoomConflict = false) {
     if (!selectedBranchId || (reservationForm.reservationKind === "standard" && !selectedRoomId)) {
       const message = "Selecciona una sucursal y un salon antes de crear la reserva";
       setFeedback(message);
@@ -635,6 +635,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
                 tableIds: reservationForm.selectedTableIds.length ? reservationForm.selectedTableIds : undefined,
                 manualTableSelection: reservationForm.tableSelectionMode === "manual" || undefined
               }),
+          ...(!isEvent && allowEventRoomConflict ? { allowEventRoomConflict: true } : {}),
           notes: reservationForm.notes || undefined,
         })
       });

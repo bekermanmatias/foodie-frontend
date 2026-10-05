@@ -96,6 +96,7 @@ export function ReservasPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [creatingReservation, setCreatingReservation] = useState(false);
+  const [confirmEventRoomConflict, setConfirmEventRoomConflict] = useState(false);
   const [reassignReservation, setReassignReservation] = useState<Reservation | null>(null);
   const [editEventReservation, setEditEventReservation] = useState<Reservation | null>(null);
   const [formError, setFormError] = useState("");
@@ -155,6 +156,10 @@ export function ReservasPage() {
       ? reservation.eventRoomAssignments.map((assignment) => assignment.roomId)
       : [reservation.room.id]
   ));
+  const selectedRoomEventAssignments = eventRoomConflicts.flatMap((reservation) =>
+    reservation.eventRoomAssignments?.filter((assignment) => assignment.roomId === selectedRoomId) || []
+  );
+  const canOverrideEventRoom = ["restaurant_owner", "restaurant_manager", "events"].includes(currentUser?.role || "");
   const eventDistributionStatus = eventAllocatedCovers === eventTotalCovers
     ? "complete"
     : eventAllocatedCovers > eventTotalCovers
@@ -254,10 +259,11 @@ export function ReservasPage() {
 
   const openCreateReservation = () => {
     setFormError("");
+    setConfirmEventRoomConflict(false);
     setCreateOpen(true);
   };
 
-  const handleCreate = async () => {
+  const handleCreate = async (allowEventRoomConflict = false) => {
     if (creatingReservation) return;
     setFormError("");
 
@@ -289,6 +295,14 @@ export function ReservasPage() {
         return;
       }
     }
+    if (reservationForm.reservationKind === "standard" && selectedRoomEventAssignments.length && canOverrideEventRoom && !allowEventRoomConflict) {
+      if (selectedRoomEventAssignments.some((assignment) => assignment.usage === "full")) {
+        setFormError("El salón está asignado totalmente a un evento. Elegí otro salón o servicio.");
+        return;
+      }
+      setConfirmEventRoomConflict(true);
+      return;
+    }
     if (reservationForm.reservationKind === "standard" && reservationForm.tableSelectionMode === "manual" && !reservationForm.selectedTableIds.length) {
       setFormError("Elegí al menos una mesa libre o volvé a la asignación automática.");
       return;
@@ -296,10 +310,16 @@ export function ReservasPage() {
 
     try {
       setCreatingReservation(true);
-      await createReservation();
+      await createReservation(allowEventRoomConflict);
       setCreateOpen(false);
+      setConfirmEventRoomConflict(false);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "No se pudo crear la reserva.");
+      const message = error instanceof Error ? error.message : "No se pudo crear la reserva.";
+      if (reservationForm.reservationKind === "standard" && canOverrideEventRoom && !allowEventRoomConflict && message.includes("El salon esta asignado a un evento parcial")) {
+        setConfirmEventRoomConflict(true);
+      } else {
+        setFormError(message);
+      }
     } finally {
       setCreatingReservation(false);
     }
@@ -891,6 +911,7 @@ export function ReservasPage() {
         open={createOpen}
         onClose={() => {
           setFormError("");
+          setConfirmEventRoomConflict(false);
           setCreateOpen(false);
         }}
         title="Nueva reserva"
@@ -900,13 +921,13 @@ export function ReservasPage() {
           <>
             <button
               type="button"
-              onClick={() => setCreateOpen(false)}
+              onClick={() => { setConfirmEventRoomConflict(false); setCreateOpen(false); }}
               className="flex-1 rounded-full border border-brand-line px-4 py-3 text-sm font-medium text-brand-ink"
             >
               Cancelar
             </button>
-            <button type="button" disabled={creatingReservation} onClick={() => void handleCreate()} className="flex-1 rounded-full bg-brand-orange px-4 py-3 text-sm font-medium text-white disabled:opacity-50">
-              {creatingReservation ? "Creando reserva..." : "Crear reserva"}
+            <button type="button" disabled={creatingReservation} onClick={() => void handleCreate(confirmEventRoomConflict)} className="flex-1 rounded-full bg-brand-orange px-4 py-3 text-sm font-medium text-white disabled:opacity-50">
+              {creatingReservation ? "Creando reserva..." : confirmEventRoomConflict ? "Continuar igual" : "Crear reserva"}
             </button>
           </>
         }
@@ -1124,6 +1145,13 @@ export function ReservasPage() {
             <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 md:col-span-2">
               {formError}
             </p>
+          ) : null}
+          {confirmEventRoomConflict ? (
+            <div role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 md:col-span-2">
+              <p className="font-semibold">El salón tiene un evento en este servicio.</p>
+              <p className="mt-1">Si el evento ocupa el salón parcialmente, podés continuar bajo tu responsabilidad siempre que haya mesas libres. Si el evento ocupa todo el salón, no se podrá crear la reserva.</p>
+              <button type="button" onClick={() => setConfirmEventRoomConflict(false)} className="mt-2 font-semibold underline">Volver y elegir otro salón</button>
+            </div>
           ) : null}
         </div>
       </AppModal>
