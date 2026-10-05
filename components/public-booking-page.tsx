@@ -9,7 +9,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 
 type publicThemeKey = "classic" | "campo" | "bistro";
 type Profile = { name: string; logoUrl?: string | null; coverImageUrl?: string | null; whatsappPhone?: string | null; accentColor: string; publicTheme?: publicThemeKey | null; minPartySize: number; maxPartySize: number; largePartyThreshold?: number | null; commentsEnabled?: boolean; publicInfo?: { phone?: string | null; menuUrl?: string | null; instagramUrl?: string | null; mapsUrl?: string | null }; supportedFeatures: string[]; branches: Array<{ slug: string; name: string }> };
-type Slot = { time: string };
+type Slot = { time: string; departureTime?: string };
 type Confirmation = { code: string; branch: string; date: string; time: string; partySize: number };
 
 type BookingTheme = {
@@ -242,6 +242,7 @@ export function PublicBookingPage({ restaurantSlug }: { restaurantSlug: string }
   const accent = profile?.accentColor || theme.defaultAccent;
   const whatsappUrl = profile?.whatsappPhone ? `https://wa.me/${profile.whatsappPhone.replace(/\D/g, "")}` : null;
   const branchName = profile?.branches.find((item) => item.slug === branch)?.name || "";
+  const firstSpecialSlot = slots.find((slot) => slot.departureTime);
   const goBack = () => { setError(""); setStep((current) => current - 1); };
   const chooseDate = (nextDate: string) => { setDate(nextDate); setTime(""); };
   const selectedStyle = (active: boolean) => active && theme.accentOutline ? { borderColor: accent, backgroundColor: softColor(accent, theme.softAlpha) } : undefined;
@@ -308,7 +309,7 @@ export function PublicBookingPage({ restaurantSlug }: { restaurantSlug: string }
 
       {step === 2 ? <section className="space-y-5"><Heading theme={theme} title={"\u00bfQu\u00e9 d\u00eda te gustar\u00eda venir?"} text={`Sede: ${branchName}`} /><FoodieCalendar theme={theme} restaurantSlug={restaurantSlug} branch={branch} partySize={partySize} value={date} onChange={chooseDate} accent={accent} /></section> : null}
 
-      {step === 3 ? <section className="space-y-6"><Heading theme={theme} title="Elegí un horario" text={`${date} \u00b7 ${partySize} personas`} />{slotsLoading ? <Loading accent={accent} /> : slots.length ? <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">{slots.map((slot) => { const active = time === slot.time; return <button type="button" key={slot.time} onClick={() => setTime(slot.time)} style={selectedStyle(active)} className={cn(theme.slot, active ? cn(theme.slotActive, theme.slotActiveText) : theme.slotIdle)}>{slot.time}</button>; })}</div> : <div className="space-y-4"><Notice theme={theme} title="Sin horarios" text="No encontramos horarios para esta fecha. Probá con otro día." />{whatsappCard}</div>}</section> : null}
+      {step === 3 ? <section className="space-y-6"><Heading theme={theme} title="Elegí un horario" text={`${date} \u00b7 ${partySize} personas`} />{slotsLoading ? <Loading accent={accent} /> : slots.length ? <><div className="grid grid-cols-3 gap-3 sm:grid-cols-4">{slots.map((slot) => { const active = time === slot.time; return <button type="button" key={slot.time} onClick={() => setTime(slot.time)} style={selectedStyle(active)} className={cn(theme.slot, active ? cn(theme.slotActive, theme.slotActiveText) : theme.slotIdle)}>{slot.time}</button>; })}</div>{firstSpecialSlot ? <p className={cn("text-xs leading-relaxed", theme.muted)}>Para el turno de las {firstSpecialSlot.time}, la mesa debe desocuparse a las {firstSpecialSlot.departureTime}.</p> : null}</> : <div className="space-y-4"><Notice theme={theme} title="Sin horarios" text="No encontramos horarios para esta fecha. Probá con otro día." />{whatsappCard}</div>}</section> : null}
 
       {step === 4 ? <section className="space-y-5"><Heading theme={theme} title="Tus datos" text={`${branchName} \u00b7 ${date} \u00b7 ${time} \u00b7 ${partySize} personas`} /><Field theme={theme} label="Nombre y apellido"><input value={fullName} onChange={(event) => setFullName(event.target.value)} className={theme.input} autoComplete="name" /></Field><Field theme={theme} label="Teléfono"><input value={phone} onChange={(event) => setPhone(event.target.value)} className={theme.input} inputMode="tel" autoComplete="tel" /></Field>{profile.commentsEnabled ? <Field theme={theme} label="Comentarios (opcional)"><textarea value={notes} onChange={(event) => setNotes(event.target.value)} className={cn(theme.input, "min-h-24")} /></Field> : null}</section> : null}
 
