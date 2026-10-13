@@ -59,7 +59,7 @@ function reservationScheduleLabel(reservation: Reservation) {
 
 function reservationRoomsLabel(reservation: Reservation) {
   if (!reservation.eventRoomAssignments?.length) return reservation.room.name;
-  return reservation.eventRoomAssignments.map((assignment) => `${assignment.room.name} (${assignment.allocatedCovers})`).join(" · ");
+  return reservation.eventRoomAssignments.map((assignment) => `${assignment.room.name} (${assignment.allocatedCovers} cubiertos · Evento ${assignment.usage === "full" ? "completo" : "parcial"})`).join(" · ");
 }
 
 function isEventReservation(reservation: Reservation) {
@@ -96,7 +96,6 @@ export function ReservasPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [creatingReservation, setCreatingReservation] = useState(false);
-  const [confirmEventRoomConflict, setConfirmEventRoomConflict] = useState(false);
   const [reassignReservation, setReassignReservation] = useState<Reservation | null>(null);
   const [editEventReservation, setEditEventReservation] = useState<Reservation | null>(null);
   const [formError, setFormError] = useState("");
@@ -159,7 +158,6 @@ export function ReservasPage() {
   const selectedRoomEventAssignments = eventRoomConflicts.flatMap((reservation) =>
     reservation.eventRoomAssignments?.filter((assignment) => assignment.roomId === selectedRoomId) || []
   );
-  const canOverrideEventRoom = ["restaurant_owner", "restaurant_manager", "events"].includes(currentUser?.role || "");
   const eventDistributionStatus = eventAllocatedCovers === eventTotalCovers
     ? "complete"
     : eventAllocatedCovers > eventTotalCovers
@@ -259,11 +257,10 @@ export function ReservasPage() {
 
   const openCreateReservation = () => {
     setFormError("");
-    setConfirmEventRoomConflict(false);
     setCreateOpen(true);
   };
 
-  const handleCreate = async (allowEventRoomConflict = false) => {
+  const handleCreate = async () => {
     if (creatingReservation) return;
     setFormError("");
 
@@ -295,12 +292,8 @@ export function ReservasPage() {
         return;
       }
     }
-    if (reservationForm.reservationKind === "standard" && selectedRoomEventAssignments.length && canOverrideEventRoom && !allowEventRoomConflict) {
-      if (selectedRoomEventAssignments.some((assignment) => assignment.usage === "full")) {
-        setFormError("El salón está asignado totalmente a un evento. Elegí otro salón o servicio.");
-        return;
-      }
-      setConfirmEventRoomConflict(true);
+    if (reservationForm.reservationKind === "standard" && selectedRoomEventAssignments.some((assignment) => assignment.usage === "full")) {
+      setFormError("El salón está asignado totalmente a un evento. Elegí otro salón o servicio.");
       return;
     }
     if (reservationForm.reservationKind === "standard" && reservationForm.tableSelectionMode === "manual" && !reservationForm.selectedTableIds.length) {
@@ -310,16 +303,11 @@ export function ReservasPage() {
 
     try {
       setCreatingReservation(true);
-      await createReservation(allowEventRoomConflict);
+      await createReservation();
       setCreateOpen(false);
-      setConfirmEventRoomConflict(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : "No se pudo crear la reserva.";
-      if (reservationForm.reservationKind === "standard" && canOverrideEventRoom && !allowEventRoomConflict && message.includes("El salon esta asignado a un evento parcial")) {
-        setConfirmEventRoomConflict(true);
-      } else {
-        setFormError(message);
-      }
+      setFormError(message);
     } finally {
       setCreatingReservation(false);
     }
@@ -571,6 +559,7 @@ export function ReservasPage() {
                   <div key={reservation.id} className="grid grid-cols-[minmax(0,1.7fr)_1fr_0.9fr_0.9fr_160px] gap-4 px-6 py-4">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-brand-ink">{reservation.fullName}</p>
+                      {isEventReservation(reservation) ? <span className="mt-1 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">Evento</span> : null}
                       <p className="mt-1 text-sm text-neutral-500">
                         {reservation.phone} - {reservation.email}
                       </p>
@@ -580,8 +569,8 @@ export function ReservasPage() {
                       </p>
                     </div>
                     <div className="min-w-0 text-sm text-neutral-500">
-                      <p className="truncate">{reservationRoomsLabel(reservation)}</p>
-                      <p className="truncate text-xs text-neutral-400">{reservation.tables.map((item) => item.table.label).join(", ") || "Sin asignacion"}{reservation.tables.length > 1 ? ` · Capacidad: ${totalTableCapacity(reservation.tables.map((item) => item.table))} pax` : ""}</p>
+                      <p>{reservationRoomsLabel(reservation)}</p>
+                      <p className="truncate text-xs text-neutral-400">{reservation.tables.map((item) => item.table.label).join(", ") || (isEventReservation(reservation) ? "Asignación por salón" : "Sin asignacion")}{reservation.tables.length > 1 ? ` · Capacidad: ${totalTableCapacity(reservation.tables.map((item) => item.table))} pax` : ""}</p>
                     </div>
                     <div className="text-sm font-semibold text-brand-ink">{reservation.code}</div>
                     <div className="text-sm text-neutral-500">{reservation.status}</div>
@@ -654,6 +643,7 @@ export function ReservasPage() {
                         <p className="truncate text-base font-semibold text-brand-ink">{reservation.fullName}</p>
                         <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-semibold text-neutral-600">{reservationStatusLabel(reservation.status)}</span>
                       </div>
+                      {isEventReservation(reservation) ? <span className="mt-1 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">Evento</span> : null}
                       <p className="mt-1 text-sm text-neutral-600">{reservationRoomsLabel(reservation)} · {reservation.tables.map((item) => item.table.label).join(", ") || (reservation.eventRoomAssignments?.length ? "Evento" : "Sin mesa")}</p>
                       <p className="mt-1 text-sm text-neutral-500">{reservation.partySize} cubiertos</p>
                       <p className="mt-2 text-[11px] uppercase tracking-[0.14em] text-neutral-400">{reservation.code}{reservation.durationMinutes ? ` · ${reservation.durationMinutes} min` : ""}</p>
@@ -911,7 +901,6 @@ export function ReservasPage() {
         open={createOpen}
         onClose={() => {
           setFormError("");
-          setConfirmEventRoomConflict(false);
           setCreateOpen(false);
         }}
         title="Nueva reserva"
@@ -921,13 +910,13 @@ export function ReservasPage() {
           <>
             <button
               type="button"
-              onClick={() => { setConfirmEventRoomConflict(false); setCreateOpen(false); }}
+              onClick={() => { setCreateOpen(false); }}
               className="flex-1 rounded-full border border-brand-line px-4 py-3 text-sm font-medium text-brand-ink"
             >
               Cancelar
             </button>
-            <button type="button" disabled={creatingReservation} onClick={() => void handleCreate(confirmEventRoomConflict)} className="flex-1 rounded-full bg-brand-orange px-4 py-3 text-sm font-medium text-white disabled:opacity-50">
-              {creatingReservation ? "Creando reserva..." : confirmEventRoomConflict ? "Continuar igual" : "Crear reserva"}
+            <button type="button" disabled={creatingReservation} onClick={() => void handleCreate()} className="flex-1 rounded-full bg-brand-orange px-4 py-3 text-sm font-medium text-white disabled:opacity-50">
+              {creatingReservation ? "Creando reserva..." : "Crear reserva"}
             </button>
           </>
         }
@@ -1146,13 +1135,7 @@ export function ReservasPage() {
               {formError}
             </p>
           ) : null}
-          {confirmEventRoomConflict ? (
-            <div role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 md:col-span-2">
-              <p className="font-semibold">El salón tiene un evento en este servicio.</p>
-              <p className="mt-1">Si el evento ocupa el salón parcialmente, podés continuar bajo tu responsabilidad siempre que haya mesas libres. Si el evento ocupa todo el salón, no se podrá crear la reserva.</p>
-              <button type="button" onClick={() => setConfirmEventRoomConflict(false)} className="mt-2 font-semibold underline">Volver y elegir otro salón</button>
-            </div>
-          ) : null}
+
         </div>
       </AppModal>
     </WorkspaceShell>

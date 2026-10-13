@@ -156,7 +156,8 @@ export function PanelPage() {
   const selectedRoomBlock = roomBlocks.find((block) => block.roomId === selectedRoomId) || null;
   const isSelectedRoomBlocked = Boolean(selectedRoomBlock);
   const selectedRoomEvent = reservations.find((reservation) => ["pending", "confirmed", "seated"].includes(reservation.status) && reservation.eventRoomAssignments?.some((assignment) => assignment.roomId === selectedRoomId)) || null;
-  const isSelectedRoomUnavailable = isSelectedRoomBlocked || Boolean(selectedRoomEvent);
+  const selectedRoomEventAssignment = selectedRoomEvent?.eventRoomAssignments?.find((assignment) => assignment.roomId === selectedRoomId);
+  const isSelectedRoomUnavailable = isSelectedRoomBlocked || selectedRoomEventAssignment?.usage === "full";
 
   useEffect(() => {
     if (!isSelectedRoomUnavailable) return;
@@ -201,7 +202,7 @@ export function PanelPage() {
   const bookingCapacity = totalTableCapacity(bookingTables);
 
   function startReservation(tableIds: string[]) {
-    if (selectedRoomEvent) {
+    if (isSelectedRoomUnavailable) {
       setCreateError("Este salón está asignado a un evento para el servicio seleccionado.");
       return;
     }
@@ -350,7 +351,7 @@ export function PanelPage() {
                 <button type="button" onClick={() => { setBookingMode(false); setBookingTableIds([]); }} className="rounded-full border border-brand-line px-4 py-3 text-sm font-medium text-brand-ink">Cancelar</button>
                 <button type="button" disabled={!bookingTableIds.length} onClick={() => startReservation(bookingTableIds)} className="rounded-full bg-brand-orange px-4 py-3 text-sm font-medium text-white disabled:opacity-50">Continuar reserva</button>
               </>
-            ) : <button type="button" disabled={isSelectedRoomBlocked} onClick={() => { setSelectedTableId(""); setOpenMenuTableId(""); setBookingMode(true); }} className="rounded-full bg-brand-orange px-4 py-3 text-sm font-medium text-white disabled:opacity-50">Nueva reserva</button>}
+            ) : <button type="button" disabled={isSelectedRoomUnavailable} onClick={() => { setSelectedTableId(""); setOpenMenuTableId(""); setBookingMode(true); }} className="rounded-full bg-brand-orange px-4 py-3 text-sm font-medium text-white disabled:opacity-50">Nueva reserva</button>}
           </div>
         </div>
 
@@ -366,11 +367,11 @@ export function PanelPage() {
               className="relative max-h-[78vh] w-full overflow-scroll overscroll-contain rounded-[24px] border border-brand-line bg-[#F7F4EF] p-3 sm:p-4"
               style={{ scrollbarGutter: "stable both-edges" }}
             >
-              {isSelectedRoomUnavailable ? (
+              {isSelectedRoomBlocked || selectedRoomEvent ? (
                 <div className="pointer-events-none sticky top-0 z-30 flex justify-center px-3 pt-3">
                   <div className="rounded-2xl border border-[#D39C11] bg-[#FFF8E1]/95 px-5 py-3 text-center shadow-lg backdrop-blur-sm">
-                    <p className="text-sm font-bold text-[#8A5B00]">{selectedRoomEvent ? "Salón asignado a un evento" : "Salón bloqueado para este turno"}</p>
-                    <p className="mt-1 text-xs text-[#8A5B00]">{selectedRoomEvent ? `${selectedRoomEvent.fullName} · ${selectedRoomEvent.partySize} cubiertos · ${selectedRoomEvent.code}` : selectedRoomBlock?.reason || "No se pueden operar mesas mientras el salón esté cerrado."}</p>
+                    <p className="text-sm font-bold text-[#8A5B00]">{isSelectedRoomBlocked ? "Salón bloqueado para este turno" : selectedRoomEventAssignment?.usage === "full" ? "Evento completo · Salón exclusivo" : "Evento parcial · Reservas habilitadas"}</p>
+                    <p className="mt-1 text-xs text-[#8A5B00]">{isSelectedRoomBlocked ? selectedRoomBlock?.reason || "No se pueden operar mesas mientras el salón esté cerrado." : selectedRoomEvent ? `${selectedRoomEvent.fullName} · ${selectedRoomEventAssignment?.allocatedCovers} cubiertos en este salón · ${selectedRoomEvent.code}` : null}</p>
                   </div>
                 </div>
               ) : null}
@@ -386,7 +387,7 @@ export function PanelPage() {
                   const status = state?.status || "free";
                   const reservation = reservationByTableId.get(table.id) || null;
                   const canReassign = Boolean(reservation && ["pending", "confirmed"].includes(reservation.status) && !isSelectedRoomBlocked);
-                  const isBookingCandidate = bookingMode && status === "free" && table.isReservable && !isSelectedRoomBlocked;
+                  const isBookingCandidate = bookingMode && status === "free" && table.isReservable && !isSelectedRoomUnavailable;
 
                   return (
                     <div
@@ -403,7 +404,7 @@ export function PanelPage() {
                     >
                       <button
                         type="button"
-                        disabled={isSelectedRoomBlocked || (bookingMode && !isBookingCandidate)}
+                        disabled={isSelectedRoomUnavailable || (bookingMode && !isBookingCandidate)}
                         onClick={(event) => {
                           event.stopPropagation();
                           if (bookingMode) { setBookingTableIds((current) => current.includes(table.id) ? current.filter((id) => id !== table.id) : [...current, table.id]); return; }
@@ -429,7 +430,7 @@ export function PanelPage() {
                       <div className="absolute -left-2 -top-2 z-20">
                         <button
                           type="button"
-                          disabled={isSelectedRoomBlocked}
+                          disabled={isSelectedRoomUnavailable}
                           onClick={(event) => {
                             event.stopPropagation();
                             setSelectedTableId(table.id);
@@ -443,12 +444,12 @@ export function PanelPage() {
 
                         {openMenuTableId === table.id ? (
                           <div className="absolute left-0 top-8 flex flex-col gap-2 rounded-[18px] border border-brand-line bg-white p-2 shadow-[0_12px_24px_rgba(31,31,33,0.12)]">
-                            {status === "free" && table.isReservable && !isSelectedRoomBlocked ? (
+                            {status === "free" && table.isReservable && !isSelectedRoomUnavailable ? (
                               <button type="button" onClick={() => { setOpenMenuTableId(""); startReservation([table.id]); }} className="flex h-8 w-8 items-center justify-center rounded-full border border-brand-orange text-sm font-bold text-brand-orange hover:bg-[#FFF4ED]" aria-label="Crear reserva" title="Crear reserva">+</button>
                             ) : null}
                             <button
                               type="button"
-                              disabled={isSelectedRoomBlocked}
+                              disabled={isSelectedRoomUnavailable}
                               onClick={() => {
                                 setOpenMenuTableId("");
                                 if (status === "reserved" && reservation) {
@@ -464,7 +465,7 @@ export function PanelPage() {
                             </button>
                             <button
                               type="button"
-                              disabled={isSelectedRoomBlocked}
+                              disabled={isSelectedRoomUnavailable}
                               onClick={() => {
                                 setOpenMenuTableId("");
                                 if (reservation) {
