@@ -109,6 +109,7 @@ type WorkspaceContextValue = {
   loadRoomLayoutImpact: (roomId: string, payload: unknown, focusTableId?: string) => Promise<RoomLayoutImpact>;
   createReservation: (allowEventRoomConflict?: boolean) => Promise<void>;
   moveReservation: (reservationId: string, action: "check-in" | "release") => Promise<void>;
+  updateReservation: (reservationId: string, input: import("../lib/types").ReservationUpdateInput) => Promise<Reservation>;
   rescheduleReservation: (reservationId: string, serviceDate: string) => Promise<Reservation>;
   updateEventReservation: (
     reservationId: string,
@@ -126,7 +127,7 @@ type WorkspaceContextValue = {
   cancelReservation: (reservationId: string, reason?: string) => Promise<Reservation>;
   deleteReservation: (reservationId: string) => Promise<void>;
   loadReservationTableOptions: (reservationId: string) => Promise<ReservationTableOption[]>;
-  loadReservationTableAvailability: (reservationId: string, roomId: string, excludedTableIds?: string[]) => Promise<ReservationTableAvailability>;
+  loadReservationTableAvailability: (reservationId: string, roomId: string, excludedTableIds?: string[], draft?: { serviceDate: string; serviceTime: string; partySize: number }) => Promise<ReservationTableAvailability>;
   loadAvailableReservationTableOptions: (input: { branchId: string; roomId: string; partySize: number; serviceDate: string; serviceTime: string; preferredZone?: string }) => Promise<ReservationTableOption[]>;
   loadAvailableManualReservationTables: (input: { branchId: string; roomId: string; serviceDate: string; serviceTime: string; preferredZone?: string }) => Promise<ManualReservationTableOption[]>;
   reassignReservationTables: (reservationId: string, input: { roomId: string; tableIds: string[] }) => Promise<void>;
@@ -858,6 +859,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function updateReservation(reservationId: string, input: import("../lib/types").ReservationUpdateInput) {
+    try {
+      const updated = await api<Reservation>(`/restaurant/reservations/${reservationId}/update`, {
+        method: "POST", body: JSON.stringify(input)
+      });
+      await loadOperationalData();
+      setFeedback("Reserva actualizada");
+      return updated;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo editar la reserva";
+      setFeedback(message);
+      throw new Error(message);
+    }
+  }
+
   async function rescheduleReservation(reservationId: string, serviceDate: string) {
     try {
       const updated = await api<Reservation>("/restaurant/reservations/" + reservationId + "/reschedule", {
@@ -918,9 +934,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return api<ReservationTableOption[]>(`/restaurant/reservations/${reservationId}/table-options`);
   }
 
-  async function loadReservationTableAvailability(reservationId: string, roomId: string, excludedTableIds: string[] = []) {
+  async function loadReservationTableAvailability(reservationId: string, roomId: string, excludedTableIds: string[] = [], draft?: { serviceDate: string; serviceTime: string; partySize: number }) {
     const query = new URLSearchParams({ roomId });
     if (excludedTableIds.length) query.set("excludeTableIds", excludedTableIds.join(","));
+    if (draft) { query.set("serviceDate", draft.serviceDate); query.set("serviceTime", draft.serviceTime); query.set("partySize", String(draft.partySize)); }
     return api<ReservationTableAvailability>(`/restaurant/reservations/${reservationId}/table-availability?${query.toString()}`);
   }
 
@@ -1220,6 +1237,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       loadRoomLayoutImpact,
       createReservation,
       moveReservation,
+      updateReservation,
       rescheduleReservation,
       updateEventReservation,
       cancelReservation,

@@ -281,6 +281,18 @@ export type Reservation = {
   tables: Array<{ table: { id: string; label: string; seats: number; metadata?: { capacity?: { maxPartySize?: number } } | null } }>;
 };
 
+export type ReservationUpdateInput = {
+  fullName: string;
+  phone: string;
+  email: string | null;
+  partySize: number;
+  serviceDate: string;
+  serviceTime: string;
+  notes: string | null;
+  roomId: string;
+  tableIds?: string[];
+};
+
 export type ReservationTableOption = {
   tableIds: string[];
   tableLabels: string[];
