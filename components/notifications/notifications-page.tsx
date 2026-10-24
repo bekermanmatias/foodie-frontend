@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WorkspaceShell } from "../workspace-shell";
+import { ConfirmDialog } from "../confirm-dialog";
 import { useNotifications, type OrderNotification } from "./notifications-provider";
 
 const modes = { delivery: "Delivery", takeaway: "Takeaway", unknown: "Modalidad por definir" };
 const date = (value: string) => new Date(value).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "short", timeStyle: "short" });
 
 export function NotificationsPage() {
-  const { enabled, list, read, attend, revision, refresh, error: connectionError } = useNotifications();
+  const { enabled, list, read, attend, remove, revision, refresh, error: connectionError } = useNotifications();
   const router = useRouter();
   const [status, setStatus] = useState("pending");
   const [page, setPage] = useState(1);
@@ -18,20 +19,29 @@ export function NotificationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<OrderNotification | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
     void list(new URLSearchParams({ ...(status ? { status } : {}), page: String(page), pageSize: "25" }).toString(), controller.signal)
-      .then((result) => { setItems(result.items); setTotal(result.total); setError(null); setLoaded(true); })
+      .then((result) => {
+        const lastPage = Math.max(1, Math.ceil(result.total / 25));
+        if (page > lastPage) { setPage(lastPage); return; }
+        setItems(result.items); setTotal(result.total); setError(null); setLoaded(true);
+      })
       .catch((err) => { if (!controller.signal.aborted) { setError(err.message); setLoaded(true); } });
     return () => controller.abort();
   }, [enabled, list, page, status, revision]);
 
-  async function action(item: OrderNotification, kind: "read" | "attend" | "chat") {
+  async function action(item: OrderNotification, kind: "read" | "attend" | "chat" | "delete") {
     setBusy(item.id); setError(null);
     try {
-      if (kind === "attend") await attend(item.id);
+      if (kind === "delete") {
+        await remove(item.id);
+        setItems((current) => current.filter((notification) => notification.id !== item.id));
+      }
+      else if (kind === "attend") await attend(item.id);
       else await read(item.id);
       if (kind === "chat") router.push(`/chat?chatId=${encodeURIComponent(item.chatId)}`);
     } catch (err) { setError(err instanceof Error ? err.message : "No se pudo completar la acción"); }
@@ -61,6 +71,7 @@ export function NotificationsPage() {
           <button disabled={busy !== null} className="rounded-full bg-brand-orange px-4 py-2 text-sm font-bold text-white disabled:opacity-50" onClick={() => void action(item, "chat")}>Abrir chat</button>
           {!item.readAt ? <button disabled={busy !== null} className="rounded-full border border-brand-line px-4 py-2 text-sm disabled:opacity-50" onClick={() => void action(item, "read")}>Marcar leída</button> : null}
           {item.status === "pending" ? <button disabled={busy !== null} className="rounded-full border border-brand-line px-4 py-2 text-sm disabled:opacity-50" onClick={() => void action(item, "attend")}>Marcar atendida</button> : null}
+          {item.status === "attended" ? <button disabled={busy !== null} className="rounded-full border border-red-200 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50" onClick={() => setDeleteTarget(item)}>Eliminar</button> : null}
         </div>
       </article>)}</div>
       <div className="flex items-center justify-between gap-2 text-sm">
@@ -69,5 +80,10 @@ export function NotificationsPage() {
         <button disabled={page * 25 >= total} className="rounded-full border px-4 py-2 disabled:opacity-40" onClick={() => setPage((value) => value + 1)}>Siguiente</button>
       </div>
     </>}
+    <ConfirmDialog open={deleteTarget !== null} title="Eliminar notificación" description="Esta notificación atendida se eliminará de la bandeja para todo el equipo. La conversación seguirá disponible en Chat."
+      confirmLabel="Eliminar" tone="danger" confirmDisabled={busy !== null}
+      onCancel={() => setDeleteTarget(null)} onConfirm={() => { if (deleteTarget && !busy) { void action(deleteTarget, "delete"); setDeleteTarget(null); } }}>
+      <p className="text-sm text-neutral-600">¿Querés eliminar la notificación de {deleteTarget?.contactName || deleteTarget?.contactPhone}?</p>
+    </ConfirmDialog>
   </WorkspaceShell>;
 }

@@ -15,6 +15,7 @@ type Value = {
   refresh: () => Promise<void>;
   list: (query: string, signal?: AbortSignal) => Promise<NotificationList>;
   read: (id: string) => Promise<void>; attend: (id: string) => Promise<void>;
+  remove: (id: string) => Promise<void>;
 };
 const Context = createContext<Value | null>(null);
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
@@ -31,7 +32,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     const response = await fetch(`${API_URL}/restaurant/notifications${path}`, {
       ...init, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...init?.headers }, cache: "no-store"
     });
-    if (!response.ok) throw new Error(response.status === 401 ? "Tu sesión de Foodie venció. Volvé a ingresar." : response.status === 403 ? "No tenés permiso para acceder a estas notificaciones." : "No pudimos actualizar las notificaciones. Intentá nuevamente.");
+    if (!response.ok) throw new Error(response.status === 401 ? "Tu sesión de Foodie venció. Volvé a ingresar." : response.status === 403 ? "No tenés permiso para acceder a estas notificaciones." : response.status === 409 ? "Primero marcá la notificación como atendida para eliminarla." : "No pudimos actualizar las notificaciones. Intentá nuevamente.");
     return response.json();
   }, [token]);
 
@@ -68,7 +69,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const list = useCallback((query: string, signal?: AbortSignal) => request<NotificationList>(`?${query}`, { signal }), [request]);
   const read = useCallback(async (id: string) => { await request(`/${encodeURIComponent(id)}/read`, { method: "POST" }); await refresh(); }, [request, refresh]);
   const attend = useCallback(async (id: string) => { await request(`/${encodeURIComponent(id)}/attend`, { method: "POST" }); await refresh(); }, [request, refresh]);
-  const value = useMemo(() => ({ enabled, ...counts, error, revision, refresh, list, read, attend }), [enabled, counts, error, revision, refresh, list, read, attend]);
+  const remove = useCallback(async (id: string) => { await request(`/${encodeURIComponent(id)}`, { method: "DELETE" }); await refresh(); }, [request, refresh]);
+  const value = useMemo(() => ({ enabled, ...counts, error, revision, refresh, list, read, attend, remove }), [enabled, counts, error, revision, refresh, list, read, attend, remove]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
