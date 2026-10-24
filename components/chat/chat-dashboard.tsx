@@ -169,7 +169,7 @@ export function ChatDashboard() {
   }, []);
 
   useEffect(() => {
-    setShowMobileChatList(!activeChat || isMobile);
+    setShowMobileChatList(!activeChat);
   }, [activeChat, isMobile]);
 
   const handleAddTag = async (chatId: string, tagName: string) => {

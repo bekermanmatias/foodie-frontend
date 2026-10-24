@@ -279,6 +279,7 @@ export type Reservation = {
   }>;
   customer?: { id: string; fullName: string; tags: Array<{ id: string; label: string }> } | null;
   tables: Array<{ table: { id: string; label: string; seats: number; metadata?: { capacity?: { maxPartySize?: number } } | null } }>;
+  deposit?: { id: string; requiredAmount: number | string; paidAmount: number | string; currency: string; status: "pending" | "partial" | "complete" } | null;
 };
 
 export type ReservationUpdateInput = {

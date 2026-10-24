@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { logChatActivity, serializeChatError } from "./chat-activity-service";
 import { useChatAuth } from "./chat-auth";
+import { loadLinkedConversation } from "./chat-deep-link-service";
 import { chatService, type Chat, type Message } from "./chat-service";
 import { chatSseService } from "./chat-sse-service";
 
@@ -23,6 +24,7 @@ type ChatContextValue = {
   loadMoreChats: () => void;
   hasMore: boolean;
   isLoadingMore: boolean;
+  openChatById: (chatId: string, signal?: AbortSignal) => Promise<void>;
   navigateToChatByPhone: (phoneNumber: string) => Promise<boolean>;
   searchChats: (query: string) => void;
   clearSearch: () => void;
@@ -335,6 +337,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [activeChat]);
 
+  const openChatById = useCallback(async (chatId: string, signal?: AbortSignal) => {
+    const result = await loadLinkedConversation(chatId, user, signal);
+    if (!result || signal?.aborted) return;
+    const chat = result.chat;
+    setActiveChat(chat);
+    setMessages(sortMessages(Array.from(new Map(result.messages.map((message) => [getMessageKey(message), message])).values())));
+    setChats((current) => [{ ...chat, unreadCount: 0 }, ...current.filter((item) => item.chatId !== chatId)]);
+    setError(null);
+  }, [user]);
+
   const navigateToChatByPhone = useCallback(async (phoneNumber: string) => {
     const normalize = (value: string) => value.replace(/[\s\-\(\)\+]/g, "");
     let matchingChat = chats.find((chat) => {
@@ -435,6 +447,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         loadMoreChats,
         hasMore,
         isLoadingMore,
+        openChatById,
         navigateToChatByPhone,
         searchChats,
         clearSearch,

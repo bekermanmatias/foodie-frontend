@@ -1,5 +1,6 @@
 "use client";
 
+import { NotificationBell } from "./notifications/notification-bell";
 import { ChevronDown, Info, Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -103,8 +104,11 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
     currentUser?.role === "restaurant_owner"
       ? [...restaurantNavigationItems, { href: "/configuracion/personalizar", label: "Configuración", children: configurationItems }, { href: "/usuarios", label: "Usuarios" }]
       : isEvents ? eventsNavigationItems : isReception ? receptionNavigationItems : restaurantNavigationItems;
-  const giftCardNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "host", "events"].includes(currentUser.role) ? [{ href: "/gift-cards", label: "Gift Cards" }] : [];
-  const navigationItems: NavigationItem[] = currentUser?.scope === "platform" ? platformNavigationItems : [...restaurantBaseNavigationItems, ...giftCardNavigationItems, ...chatNavigationItems];
+  const giftCardNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host", "events"].includes(currentUser.role) ? [{ href: "/gift-cards", label: "Gift Cards" }] : [];
+  const depositNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role) ? [{ href: "/senas", label: "Se?as" }] : [];
+  const documentNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager"].includes(currentUser.role) ? [{ href: "/documentos", label: "Documentos" }] : [];
+  const notificationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host"].includes(currentUser.role) ? [{ href: "/notificaciones", label: "Notificaciones" }] : [];
+  const navigationItems: NavigationItem[] = currentUser?.scope === "platform" ? platformNavigationItems : [...restaurantBaseNavigationItems, ...notificationItems, ...depositNavigationItems, ...documentNavigationItems, ...giftCardNavigationItems, ...chatNavigationItems];
   const workspaceLabel = currentUser?.scope === "platform" ? "Administracion" : "Operacion";
   const workspaceName = currentUser?.scope === "platform" ? "Foodie AI" : bootstrap?.name || "Restaurante";
   const workspaceImage = currentUser?.scope === "restaurant" ? bootstrap?.profileImageUrl : "";
@@ -206,13 +210,13 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
           </div>
 
           <div className={`workspace-content-card ${fillViewport ? `${compactShortDesktop ? "lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:rounded-[26px] lg:p-4" : "xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:rounded-[26px] xl:p-4"} 2xl:rounded-[30px] 2xl:p-5` : "xl:rounded-[32px] 2xl:rounded-[36px]"} min-h-[70vh] rounded-[28px] border border-white/70 bg-white p-4 shadow-[0_32px_70px_rgba(0,0,0,0.18)] sm:p-5 md:p-8`}>
-            {hideIntro ? null : (
+            {hideIntro ? <div className="mb-3 flex justify-end"><NotificationBell /></div> : (
               <div className={`workspace-content-intro ${fillViewport ? `${compactShortDesktop ? "lg:shrink-0 lg:gap-3 lg:pb-3" : "xl:shrink-0 xl:gap-3 xl:pb-3"}` : "pb-6 md:pb-7"} grid gap-4 border-b border-brand-line lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start`}>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.42em] text-brand-orange md:text-xs md:tracking-[0.5em]">{workspaceLabel}</p>
                   <h1 className={`workspace-content-title ${fillViewport ? `${compactShortDesktop ? "lg:mt-1 lg:text-3xl" : "xl:mt-1 xl:text-3xl"} 2xl:text-4xl` : "md:mt-4 md:text-5xl 2xl:text-6xl"} mt-3 text-4xl font-extrabold tracking-[-0.06em] text-brand-ink`}>{title}</h1>
                 </div>
-                <PageInfoTooltip description={description} />
+                <div className="flex items-center justify-end gap-3"><NotificationBell /><PageInfoTooltip description={description} /></div>
               </div>
             )}
 

@@ -59,8 +59,8 @@ export const chatService = {
     return response.data;
   },
 
-  async getChatWithMessages(chatId: string): Promise<ChatWithMessages> {
-    const response = await chatApi.get(`/chats/${chatId}`);
+  async getChatWithMessages(chatId: string, signal?: AbortSignal): Promise<ChatWithMessages> {
+    const response = await chatApi.get(`/chats/${encodeURIComponent(chatId)}`, { signal });
     return response.data;
   },
 
