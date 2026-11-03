@@ -90,6 +90,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const loadChatMessages = useCallback(async (chat: Chat) => {
     try {
       const chatWithMessages = await chatService.getChatWithMessages(chat.chatId);
+      // The detail endpoint combines Chat and ChatState, the same control state n8n reads.
+      const effectiveState = {
+        chatStatus: chatWithMessages.chat.chatStatus,
+        statusChangeTime: chatWithMessages.chat.statusChangeTime
+      };
+      setActiveChat((current) => current?.chatId === chat.chatId ? { ...current, ...effectiveState } : current);
+      setChats((current) => current.map((item) => item.chatId === chat.chatId ? { ...item, ...effectiveState } : item));
       const uniqueMessages = Array.from(new Map(chatWithMessages.messages.map((message) => [getMessageKey(message), message])).values());
       const sorted = sortMessages(uniqueMessages);
       setMessages(sorted);
