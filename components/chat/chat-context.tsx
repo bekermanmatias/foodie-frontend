@@ -95,8 +95,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         chatStatus: chatWithMessages.chat.chatStatus,
         statusChangeTime: chatWithMessages.chat.statusChangeTime
       };
-      setActiveChat((current) => current?.chatId === chat.chatId ? { ...current, ...effectiveState } : current);
-      setChats((current) => current.map((item) => item.chatId === chat.chatId ? { ...item, ...effectiveState } : item));
+      setActiveChat((current) => current?.chatId === chat.chatId &&
+        (current.chatStatus !== effectiveState.chatStatus || current.statusChangeTime !== effectiveState.statusChangeTime)
+        ? { ...current, ...effectiveState } : current);
+      setChats((current) => current.map((item) => item.chatId === chat.chatId &&
+        (item.chatStatus !== effectiveState.chatStatus || item.statusChangeTime !== effectiveState.statusChangeTime)
+        ? { ...item, ...effectiveState } : item));
       const uniqueMessages = Array.from(new Map(chatWithMessages.messages.map((message) => [getMessageKey(message), message])).values());
       const sorted = sortMessages(uniqueMessages);
       setMessages(sorted);
@@ -171,12 +175,49 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [user, refreshChats]);
 
   useEffect(() => {
+    if (!user) return;
+    const timer = window.setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const clientId = user.role === "admin" ? undefined : user.clientId;
+        const fresh = await chatService.getChats(clientId, 0, CHAT_PAGE_LIMIT);
+        const byId = new Map(fresh.map((chat) => [chat.chatId, chat]));
+        setChats((current) => current.map((chat) => {
+          const updated = byId.get(chat.chatId);
+          return updated ? { ...chat, chatStatus: updated.chatStatus, statusChangeTime: updated.statusChangeTime } : chat;
+        }));
+        setActiveChat((current) => {
+          const updated = current && byId.get(current.chatId);
+          return updated && (current.chatStatus !== updated.chatStatus || current.statusChangeTime !== updated.statusChangeTime)
+            ? { ...current, chatStatus: updated.chatStatus, statusChangeTime: updated.statusChangeTime } : current;
+        });
+      } catch { /* The next refresh or SSE event will retry. */ }
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [user]);
+
+  useEffect(() => {
     if (activeChat) {
       void loadChatMessages(activeChat);
     } else {
       setMessages([]);
     }
   }, [activeChat, loadChatMessages]);
+
+  const activeChatId = activeChat?.chatId;
+  useEffect(() => {
+    if (!user || !activeChatId) return;
+    const timer = window.setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const { chat } = await chatService.getChatWithMessages(activeChatId);
+        setActiveChat((current) => current?.chatId === activeChatId &&
+          (current.chatStatus !== chat.chatStatus || current.statusChangeTime !== chat.statusChangeTime)
+          ? { ...current, chatStatus: chat.chatStatus, statusChangeTime: chat.statusChangeTime } : current);
+      } catch { /* The next refresh or SSE event will retry. */ }
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [user, activeChatId]);
 
   const loadMoreChats = useCallback(async () => {
     if (isLoading || isLoadingMore || !hasMore || !user) return;
