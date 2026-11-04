@@ -1,4 +1,5 @@
 "use client";
+import { moduleEnabled } from "../../lib/restaurant-features";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useWorkspace } from "../workspace-provider";
@@ -21,8 +22,8 @@ const Context = createContext<Value | null>(null);
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
-  const { currentUser, token } = useWorkspace();
-  const enabled = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host"].includes(currentUser.role);
+  const { currentUser, token, bootstrap } = useWorkspace();
+  const enabled = moduleEnabled(bootstrap, "notifications") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host"].includes(currentUser.role);
   const [counts, setCounts] = useState({ unread: 0, pending: 0 });
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);

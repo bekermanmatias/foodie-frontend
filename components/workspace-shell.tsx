@@ -1,4 +1,5 @@
 "use client";
+import { moduleEnabled } from "../lib/restaurant-features";
 
 import { NotificationBell, NotificationPendingDot } from "./notifications/notification-bell";
 import { ChevronDown, Info, Menu, X } from "lucide-react";
@@ -93,7 +94,7 @@ export function WorkspaceShell({
   const isReception = currentUser?.scope === "restaurant" && currentUser.role === "host";
   const isEvents = currentUser?.scope === "restaurant" && currentUser.role === "events";
   const chatNavigationItems =
-    currentUser?.scope === "restaurant" && !isReception && !isEvents
+    !bootstrap?.isDemo && currentUser?.scope === "restaurant" && !isReception && !isEvents
       ? getEnabledChatModules(chatSession.user).map((module) => ({
           href: module.href,
           label: module.label
@@ -104,13 +105,13 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
     currentUser?.role === "restaurant_owner"
       ? [...restaurantNavigationItems, { href: "/configuracion/personalizar", label: "Configuración", children: configurationItems }, { href: "/usuarios", label: "Usuarios" }]
       : isEvents ? eventsNavigationItems : isReception ? receptionNavigationItems : restaurantNavigationItems;
-  const giftCardNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host", "events"].includes(currentUser.role) ? [{ href: "/gift-cards", label: "Gift Cards" }] : [];
+  const giftCardNavigationItems: NavigationItem[] = moduleEnabled(bootstrap, "giftCards") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host", "events"].includes(currentUser.role) ? [{ href: "/gift-cards", label: "Gift Cards" }] : [];
   const depositNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role) ? [{ href: "/senas", label: "Señas" }] : [];
   const documentNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager"].includes(currentUser.role) ? [{ href: "/documentos", label: "Documentos" }] : [];
-  const notificationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host"].includes(currentUser.role) ? [{ href: "/notificaciones", label: "Notificaciones" }] : [];
-  const navigationItems: NavigationItem[] = currentUser?.scope === "platform" ? platformNavigationItems : [...restaurantBaseNavigationItems, ...notificationItems, ...depositNavigationItems, ...documentNavigationItems, ...giftCardNavigationItems, ...chatNavigationItems];
+  const notificationItems: NavigationItem[] = moduleEnabled(bootstrap, "notifications") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host"].includes(currentUser.role) ? [{ href: "/notificaciones", label: "Notificaciones" }] : [];
+  const navigationItems: NavigationItem[] = currentUser?.scope === "platform" ? platformNavigationItems : [...restaurantBaseNavigationItems, ...notificationItems, ...depositNavigationItems, ...documentNavigationItems, ...giftCardNavigationItems, ...chatNavigationItems].filter((item) => !bootstrap?.isDemo || item.href !== "/chat");
   const workspaceLabel = currentUser?.scope === "platform" ? "Administracion" : "Operacion";
-  const workspaceName = currentUser?.scope === "platform" ? "Foodie AI" : bootstrap?.name || "Restaurante";
+  const workspaceName = currentUser?.scope === "platform" ? "Foodie AI" : `${bootstrap?.name || "Restaurante"}${bootstrap?.isDemo ? " · DEMO" : ""}`;
   const workspaceImage = currentUser?.scope === "restaurant" ? bootstrap?.profileImageUrl : "";
   const mobileNavigationItems = navigationItems.flatMap((item) => item.children ? item.children : [item]);
   const activeMobileNavigationItem = mobileNavigationItems.find((item) => pathname === item.href || (item.href !== "/chat" && pathname.startsWith(`${item.href}/`)));

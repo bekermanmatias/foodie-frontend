@@ -307,6 +307,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     const data: Bootstrap = await response.json();
     setBootstrap(data);
+    if (data.isDemo) clearChatSession();
 
     const branchId = selectedBranchId || data.branches[0]?.id || "";
     setSelectedBranchId(branchId);
@@ -403,12 +404,26 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           token: savedChatToken,
           user: null
         });
-        validateStoredChatSession(savedChatToken).catch(() => clearChatSession());
+
       }
     } else if (pathname !== "/") {
       router.replace("/");
     }
   }, [pathname, router]);
+
+  useEffect(() => {
+    if (!bootstrap || currentUser?.scope !== "restaurant") return;
+    if (bootstrap.isDemo) { clearChatSession(); return; }
+    const stored = window.localStorage.getItem("auth_token");
+    if (stored) void validateStoredChatSession(stored).catch(() => clearChatSession());
+  }, [bootstrap?.id, bootstrap?.isDemo, currentUser?.scope]);
+
+  useEffect(() => {
+    if (!token || currentUser?.scope !== "restaurant") return;
+    const refresh = () => { void loadBootstrap(token).catch(() => setFeedback("No se pudo actualizar la disponibilidad de modulos")); };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [token, currentUser?.scope]);
 
   useEffect(() => {
     if (!token || !currentUser) return;

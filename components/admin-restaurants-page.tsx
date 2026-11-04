@@ -2,6 +2,7 @@
 
 import { Building2, Copy, Mail, MessageCircle, Pencil, Plus, UserCog, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { RestaurantFeaturesModal } from "./restaurant-features-modal";
 import { AppModal } from "./app-modal";
 import { WorkspaceShell } from "./workspace-shell";
 import { useWorkspace } from "./workspace-provider";
@@ -45,6 +46,7 @@ const initialRestaurantForm: RestaurantFormState = {
 
 export function AdminRestaurantsPage() {
   const { currentUser, platformRestaurants, createPlatformRestaurant, updatePlatformRestaurant, updatePlatformBranch, uploadPlatformRestaurantProfileImage, rotatePlatformRestaurantToken, configurePlatformRestaurantChat } = useWorkspace();
+  const [featuresRestaurant, setFeaturesRestaurant] = useState<{ id: string; name: string } | null>(null);
   const [restaurantModalOpen, setRestaurantModalOpen] = useState(false);
   const [restaurantForm, setRestaurantForm] = useState<RestaurantFormState>(initialRestaurantForm);
   const [profileUploading, setProfileUploading] = useState(false);
@@ -246,6 +248,7 @@ export function AdminRestaurantsPage() {
                     <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${restaurant.isActive ? "bg-[#E8F7EE] text-[#146C37]" : "bg-[#F1F1F1] text-[#5F5F5F]"}`}>
                       {restaurant.isActive ? "Activo" : "Inactivo"}
                     </span>
+                    <button type="button" onClick={() => setFeaturesRestaurant(restaurant)} className="rounded-full border border-brand-line px-3 py-2 text-xs font-bold">Módulos</button>
                     <button type="button" onClick={() => openEditRestaurant(restaurant)} aria-label={`Editar ${restaurant.name}`} className="rounded-full border border-brand-line p-2 text-brand-ink transition hover:border-brand-orange hover:text-brand-orange">
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
@@ -325,6 +328,7 @@ export function AdminRestaurantsPage() {
         </div>
       </section>
 
+      {featuresRestaurant && <RestaurantFeaturesModal key={featuresRestaurant.id} restaurant={featuresRestaurant} onClose={() => setFeaturesRestaurant(null)} />}
       <AppModal
         open={restaurantModalOpen}
         onClose={() => {

@@ -92,6 +92,8 @@ export type Branch = {
 };
 
 export type Bootstrap = {
+  isDemo?: boolean;
+  features?: Record<string, boolean>;
   id: string;
   name: string;
   slug: string;
