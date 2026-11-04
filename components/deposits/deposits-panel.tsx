@@ -20,14 +20,15 @@ export function useDepositApi() {
   }, [token]);
 }
 
-export function DepositsPanel({ phone, compact = false }: { phone?: string; compact?: boolean }) {
+export function DepositsPanel({ phone, compact = false, expanded }: { phone?: string; compact?: boolean; expanded?: boolean }) {
   const { bootstrap, currentUser, token } = useWorkspace();
   const enabled = (!compact || Boolean(phone)) && moduleEnabled(bootstrap, "deposits") && Boolean(currentUser && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role));
   const api = useDepositApi();
   const [rows, setRows] = useState<Deposit[]>([]); const [reservations, setReservations] = useState<Reservation[]>([]);
   const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ branchId: "", status: "", review: "", from: "", to: "", expired: "" });
-  const [search, setSearch] = useState(""); const [open, setOpen] = useState(!compact);
+  const [search, setSearch] = useState(""); const [internalOpen, setOpen] = useState(!compact);
+  const open = expanded ?? internalOpen;
   const [action, setAction] = useState<{ type: string; row?: Deposit; proof?: Proof; reservation?: Reservation; key: string } | null>(null);
   const [amount, setAmount] = useState(""); const [reference, setReference] = useState(""); const [notes, setNotes] = useState(""); const [date, setDate] = useState("");
   const [busy, setBusy] = useState(false); const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
@@ -80,7 +81,7 @@ export function DepositsPanel({ phone, compact = false }: { phone?: string; comp
   const button = "rounded-full border border-brand-line bg-white px-3 py-2 text-xs font-bold text-brand-ink disabled:opacity-50";
   const visible = rows.filter((row) => `${row.reservation.fullName} ${row.reservation.code} ${row.reservation.phone}`.toLowerCase().includes(search.toLowerCase()));
   return <section className={`rounded-2xl border border-brand-line bg-[#FFFCF8] ${compact ? "max-h-[45vh] shrink-0 overflow-auto p-3" : "p-4"}`}>
-    <div className="flex items-center justify-between gap-2"><button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="font-bold">Señas y comprobantes {open ? "▾" : "▸"}</button>{open && <button className={button} onClick={() => void refresh()}>Actualizar</button>}</div>
+    <div className="flex items-center justify-between gap-2">{expanded !== undefined ? <span className="text-sm font-bold">Comprobantes</span> : <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="font-bold">Señas y comprobantes {open ? "▾" : "▸"}</button>}{open && <button className={button} onClick={() => void refresh()}>Actualizar</button>}</div>
     {open && <div className="mt-3 space-y-3">
       {!compact && <div className="grid gap-2 sm:grid-cols-3"><input aria-label="Buscar reserva" placeholder="Nombre, código o teléfono" value={search} onChange={(e) => setSearch(e.target.value)} className="foodie-input" /><select aria-label="Sucursal" className="foodie-input" value={filters.branchId} onChange={(e) => setFilters({ ...filters, branchId: e.target.value })}><option value="">Todas las sucursales</option>{bootstrap?.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select><select aria-label="Estado de seña" className="foodie-input" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">Todos los pagos</option><option value="pending">Sin acreditar</option><option value="partial">Pago parcial</option><option value="complete">Seña cubierta</option></select><select aria-label="Revisión" className="foodie-input" value={filters.review} onChange={(e) => setFilters({ ...filters, review: e.target.value })}><option value="">Todos los comprobantes</option><option value="pending">Por revisar</option><option value="approved">Aprobados</option><option value="rejected">Rechazados</option></select><label>Desde<input type="date" className="foodie-input" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} /></label><label>Hasta<input type="date" className="foodie-input" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} /></label><label className="text-sm"><input type="checkbox" checked={filters.expired === "true"} onChange={(e) => setFilters({ ...filters, expired: e.target.checked ? "true" : "" })} /> Solo vencidas sin cubrir</label></div>}
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}{loading && <p role="status" className="text-sm">Actualizando señas…</p>}

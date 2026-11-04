@@ -1,6 +1,8 @@
 "use client";
 
 import { DepositsPanel } from "../deposits/deposits-panel";
+import { useWorkspace } from "../workspace-provider";
+import { moduleEnabled } from "../../lib/restaurant-features";
 import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -17,6 +19,7 @@ import {
   Paperclip,
   Phone,
   RefreshCw,
+  ReceiptText,
   Search,
   Send,
   Tag,
@@ -117,6 +120,9 @@ function getAvatarText(chat: Chat) {
 
 export function ChatDashboard() {
   const { user } = useChatAuth();
+  const { bootstrap, currentUser } = useWorkspace();
+  const canViewProofs = moduleEnabled(bootstrap, "deposits") && Boolean(currentUser && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role));
+  const [proofsChatId, setProofsChatId] = useState<string | null>(null);
   const {
     chats,
     activeChat,
@@ -563,9 +569,21 @@ export function ChatDashboard() {
                     <div className="chat-active-avatar flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F2ECE5] text-sm font-semibold text-brand-ink xl:h-10 xl:w-10 xl:rounded-xl xl:text-xs">
                       {getAvatarText(activeChat)}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="chat-active-name truncate text-lg font-semibold text-brand-ink xl:text-base">{activeChat.contactName || activeChat.phoneNumber}</h3>
+                        {canViewProofs && activeChat.phoneNumber ? (
+                          <button
+                            type="button"
+                            aria-expanded={proofsChatId === activeChat.chatId}
+                            aria-controls="chat-proofs-panel"
+                            onClick={() => setProofsChatId(proofsChatId === activeChat.chatId ? null : activeChat.chatId)}
+                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors ${proofsChatId === activeChat.chatId ? "border-brand-orange bg-[#FFF1EA] text-[#B65221]" : "border-brand-line bg-white text-brand-ink hover:bg-[#FFF1EA]"}`}
+                          >
+                            <ReceiptText aria-hidden="true" className="h-3.5 w-3.5" />
+                            Comprobantes
+                          </button>
+                        ) : null}
                         <span
                           className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] xl:px-2.5 xl:py-0.5 xl:text-[10px] ${
                             activeChat.chatStatus === "bot" ? "bg-[#E8F4EC] text-[#2E6A46]" : "bg-[#FFF1EA] text-[#B65221]"
@@ -640,7 +658,11 @@ export function ChatDashboard() {
                 </div>
               </header>
 
-              <DepositsPanel key={`deposits-${activeChat.chatId}`} phone={activeChat.phoneNumber} compact />
+              {canViewProofs && activeChat.phoneNumber && proofsChatId === activeChat.chatId ? (
+                <div id="chat-proofs-panel" className="min-h-0 max-h-[45vh] shrink-0 overflow-auto">
+                  <DepositsPanel key={`deposits-${activeChat.chatId}`} phone={activeChat.phoneNumber} compact expanded />
+                </div>
+              ) : null}
               <div ref={messagesContainerRef} className="chat-messages flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)] px-4 py-5 md:px-6 xl:px-4 xl:py-4">
                 {Object.keys(messageGroups)
                   .sort()
