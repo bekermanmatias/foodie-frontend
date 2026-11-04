@@ -34,3 +34,10 @@ test("demo blocks all chat routes but keeps internal modules available", () => {
   assert.equal(unavailableRoute({ isDemo: true }, "/gift-cards"), null);
   assert.equal(unavailableRoute({ isDemo: false }, "/chat"), null);
 });
+
+test("deposits are opt-in and their direct route is blocked when off", () => {
+  assert.equal(moduleEnabled({}, "deposits"), false);
+  assert.ok(unavailableRoute({}, "/senas"));
+  assert.equal(unavailableRoute({ features: { deposits: true } }, "/senas"), null);
+  assert.equal(moduleEnabled({ features: { deposits: true } }, "giftCards"), true);
+});

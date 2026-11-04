@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
+    "test:deposits": "node --test test/restaurant-features.test.cjs",
     "build": "next build",
     "test:restaurant-features": "node --test test/restaurant-features.test.cjs",
     "start": "next start -p 3000",

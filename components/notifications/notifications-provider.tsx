@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useWorkspace } from "../workspace-provider";
 
 export type OrderNotification = {
-  id: string; type: "chat_order"; status: "pending" | "attended";
+  id: string; type: "chat_order" | "deposit_proof"; status: "pending" | "attended";
   chatId: string; channelId: string; contactName: string | null; contactPhone: string;
   orderMode: "delivery" | "takeaway" | "unknown"; summary: string; occurredAt: string;
   readAt: string | null; attendedAt: string | null; attendedBy: { fullName: string } | null;
@@ -23,7 +23,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const { currentUser, token, bootstrap } = useWorkspace();
-  const enabled = moduleEnabled(bootstrap, "notifications") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host"].includes(currentUser.role);
+  const enabled = (currentUser?.role !== "cashier" || moduleEnabled(bootstrap, "deposits")) && moduleEnabled(bootstrap, "notifications") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host", "cashier"].includes(currentUser.role);
   const [counts, setCounts] = useState({ unread: 0, pending: 0 });
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);

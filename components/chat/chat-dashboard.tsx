@@ -1,5 +1,6 @@
 "use client";
 
+import { DepositsPanel } from "../deposits/deposits-panel";
 import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -639,6 +640,7 @@ export function ChatDashboard() {
                 </div>
               </header>
 
+              <DepositsPanel key={`deposits-${activeChat.chatId}`} phone={activeChat.phoneNumber} compact />
               <div ref={messagesContainerRef} className="chat-messages flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)] px-4 py-5 md:px-6 xl:px-4 xl:py-4">
                 {Object.keys(messageGroups)
                   .sort()

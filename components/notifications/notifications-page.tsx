@@ -48,7 +48,7 @@ export function NotificationsPage() {
     finally { setBusy(null); }
   }
 
-  return <WorkspaceShell title="Notificaciones" description="Pedidos por WhatsApp pendientes de atención. Abrir un chat no marca el pedido como atendido.">
+  return <WorkspaceShell title="Notificaciones" description="Pedidos y comprobantes pendientes de atención. Abrir un chat no marca la notificación como atendida.">
     {!enabled ? <p>No tenés acceso a las notificaciones.</p> : <>
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm font-semibold">Mostrar <select className="ml-2 rounded-xl border border-brand-line bg-white p-2" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); setLoaded(false); setItems([]); }}>
@@ -62,7 +62,7 @@ export function NotificationsPage() {
       <div className="grid gap-3">{items.map((item) => <article key={item.id} className={`min-w-0 rounded-2xl border p-4 sm:p-5 ${item.readAt ? "border-brand-line bg-white" : "border-brand-orange/40 bg-orange-50/60"}`}>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div><p className="font-bold text-brand-ink">{item.contactName || item.contactPhone} {!item.readAt ? <span className="ml-2 text-xs text-brand-orange">Sin leer</span> : null}</p>
-            <p className="mt-1 text-sm text-neutral-500">{item.contactPhone} · {modes[item.orderMode]}</p></div>
+            <p className="mt-1 text-sm text-neutral-500">{item.contactPhone} · {item.type === "deposit_proof" ? "Comprobante de seña" : modes[item.orderMode]}</p></div>
           <time className="text-xs text-neutral-500" dateTime={item.occurredAt}>{date(item.occurredAt)}</time>
         </div>
         <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6">{item.summary}</p>
