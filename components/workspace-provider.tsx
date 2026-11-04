@@ -400,7 +400,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setUserName(savedUserName || "");
       setCurrentUser(savedUser ? JSON.parse(savedUser) : null);
       if (savedChatToken) {
-        setChatSession({
+        // Route changes must retain the PupuIA user and its inherited permissions.
+        setChatSession((current) => current.token === savedChatToken ? current : {
           token: savedChatToken,
           user: null
         });
@@ -416,7 +417,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (bootstrap.isDemo) { clearChatSession(); return; }
     const stored = window.localStorage.getItem("auth_token");
     if (stored) void validateStoredChatSession(stored).catch(() => clearChatSession());
-  }, [bootstrap?.id, bootstrap?.isDemo, currentUser?.scope]);
+  }, [bootstrap?.id, bootstrap?.isDemo, currentUser?.scope, chatSession.token]);
 
   useEffect(() => {
     if (!token || currentUser?.scope !== "restaurant") return;
