@@ -22,7 +22,7 @@ export function ChatProofsPanel({ phone, showDeposits, showGiftCards }: {
       }}>Actualizar</button>
     </div>
     {showGiftCards && error && <p role="alert" className="text-sm text-red-700">No se pudieron cargar los comprobantes de Gift Cards. {error}</p>}
-    {showGiftCards && proofs.length > 0 && <GiftCardProofList proofs={proofs} onReviewed={refresh} showType />}
+    {showGiftCards && proofs.length > 0 && <GiftCardProofList proofs={proofs} onReviewed={refresh} showType showSend />}
     {showDeposits && <DepositsPanel phone={phone} compact refreshKey={refreshKey} onPanelState={setDepositState} />}
     {!hasContent && <p role="status" className="text-sm text-neutral-600">
       {pending ? "Cargando comprobantes…" : "Este contacto todavía no tiene comprobantes."}

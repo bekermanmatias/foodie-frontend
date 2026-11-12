@@ -8,9 +8,10 @@ import { moduleEnabled } from "../lib/restaurant-features";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 const button = "rounded-full border border-brand-line px-3 py-1.5 text-sm font-semibold disabled:opacity-50";
+type GiftCardDeliveryState = { ready: boolean; channelConfigured: boolean; sent: number; total: number };
 type GiftCardProof = {
   id: string; name: string; mimeType: string; createdTime: string;
-  order: { id: string; purchaserName: string; amount: string | number; currency: string; status: string; paymentStatus: string; product?: { name: string } | null };
+  order: { id: string; purchaserName: string; amount: string | number; currency: string; status: string; paymentStatus: string; product?: { name: string } | null; delivery?: GiftCardDeliveryState };
 };
 
 export function useGiftCardProofs(query: string, enabled: boolean) {
@@ -70,7 +71,7 @@ export function GiftCardProofHistory({ refreshKey }: { refreshKey: number }) {
     <h3 className="text-sm font-bold">Gift Cards</h3>
     {error ? <p role="alert" className="text-sm text-red-700">{error}</p>
       : loading ? <p role="status" className="text-sm text-neutral-600">Cargando comprobantes…</p>
-      : result.items.length ? <GiftCardProofList proofs={result.items} onReviewed={() => setRevision(value => value + 1)} />
+      : result.items.length ? <GiftCardProofList proofs={result.items} onReviewed={() => setRevision(value => value + 1)} showSend />
       : <p className="text-sm text-neutral-600">{pages.length || result.nextPageToken ? "No hay comprobantes de Gift Cards en esta página." : "Todavía no hay comprobantes de Gift Cards."}</p>}
     {(pages.length > 0 || result.nextPageToken) && <div className="flex flex-wrap gap-2">
       {pages.length > 0 && <button type="button" disabled={loading} className={button} onClick={() => setPages(current => current.slice(0, -1))}>Más recientes</button>}
@@ -82,19 +83,24 @@ export function GiftCardProofHistory({ refreshKey }: { refreshKey: number }) {
   </section>;
 }
 
-export function GiftCardProofList({ proofs, onReviewed, showType = false }: { proofs: GiftCardProof[]; onReviewed: () => void; showType?: boolean }) {
+export function GiftCardProofList({ proofs, onReviewed, showType = false, showSend = false }: { proofs: GiftCardProof[]; onReviewed: () => void; showType?: boolean; showSend?: boolean }) {
   const [selected, setSelected] = useState<GiftCardProof | null>(null);
   const [notice, setNotice] = useState("");
   return <>
     <ul className="space-y-2">
-      {proofs.map(proof => <li key={proof.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#FFF6EF] px-3 py-2 text-sm">
+      {proofs.map((proof, index) => <li key={proof.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#FFF6EF] px-3 py-2 text-sm">
         <div>
           <p className="font-bold">{showType && proof.order.product?.name ? "Gift Card · " : ""}{proof.order.product?.name || "Gift Card"} · {proof.order.purchaserName}</p>
           <p className="text-neutral-600">{formatAmount(proof.order)} · {paymentLabel(proof.order)} · {new Date(proof.createdTime).toLocaleString("es-AR")}</p>
         </div>
-        <button type="button" className={`${button} bg-white`} onClick={() => { setNotice(""); setSelected(proof); }}>
-          {canReview(proof.order) ? "Revisar comprobante" : "Ver comprobante"}
-        </button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button type="button" className={`${button} bg-white`} onClick={() => { setNotice(""); setSelected(proof); }}>
+            {canReview(proof.order) ? "Revisar comprobante" : "Ver comprobante"}
+          </button>
+          {showSend && proof.order.paymentStatus === "CONFIRMED" && proof.order.status === "PAID"
+            && proofs.findIndex(item => item.order.id === proof.order.id) === index && proof.order.delivery
+            && <GiftCardDelivery orderId={proof.order.id} delivery={proof.order.delivery} />}
+        </div>
       </li>)}
     </ul>
     {notice && <p role="status" className="text-sm text-emerald-700">{notice}</p>}
@@ -104,6 +110,46 @@ export function GiftCardProofList({ proofs, onReviewed, showType = false }: { pr
       onReviewed();
     }} />}
   </>;
+}
+
+function GiftCardDelivery({ orderId, delivery }: { orderId: string; delivery: GiftCardDeliveryState }) {
+  const api = useDepositApi();
+  const inFlight = useRef(false);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(0);
+  const [error, setError] = useState("");
+  const sentCount = Math.max(sent, delivery.sent);
+
+  async function send() {
+    if (inFlight.current || !delivery.channelConfigured || sentCount >= delivery.total) return;
+    inFlight.current = true;
+    setSending(true);
+    setError("");
+    try {
+      const result = await api<{ sent: boolean; sentCount: number; totalCount: number; reason?: string | null }>(
+        `/restaurant/gift-cards/orders/${encodeURIComponent(orderId)}/send`, { method: "POST", body: JSON.stringify({ resend: false }) }
+      );
+      setSent(result.sentCount);
+      if (!result.sent) setError(result.reason === "OUTSIDE_24H_WINDOW"
+        ? "El cliente tiene que volver a escribir por WhatsApp antes de reintentar."
+        : `${result.sentCount} de ${result.totalCount} enviadas. Podés reintentar las pendientes.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo enviar la Gift Card.");
+    } finally {
+      inFlight.current = false;
+      setSending(false);
+    }
+  }
+
+  if (!delivery.ready) return null;
+  if (sentCount >= delivery.total) return <span role="status" className="text-sm font-semibold text-emerald-700">Enviada por WhatsApp</span>;
+  return <div className="space-y-1">
+    <button type="button" className={`${button} bg-brand-orange text-white`} disabled={sending || !delivery.channelConfigured} onClick={() => void send()}>
+      {sending ? "Enviando…" : sentCount > 0 ? "Enviar Gift Cards pendientes" : "Enviar Gift Card"}
+    </button>
+    {!delivery.channelConfigured && <p className="text-xs text-neutral-600">Configurá el canal de WhatsApp para enviar.</p>}
+    {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
+  </div>;
 }
 
 function canReview(order: GiftCardProof["order"]) {
