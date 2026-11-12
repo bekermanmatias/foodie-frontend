@@ -6,6 +6,7 @@ import { WorkspaceShell } from "../workspace-shell";
 import { DepositFilters, DepositsPanel, emptyDepositFilters, useDepositApi, type DepositFilterValues } from "./deposits-panel";
 import { GiftCardProofHistory } from "../gift-card-proofs";
 import { moduleEnabled } from "../../lib/restaurant-features";
+import { ListPagination, type NumberedPage } from "./list-pagination";
 
 type Rule = { id: string; label: string; minPeople: number; maxPeople: number | null; eventId: string | null; mode: "fixed" | "per_person"; amount: number };
 type Settings = { reviewed: boolean; currency: string; bankAlias: string; bankCbu: string; bankHolder: string; paymentHours: number; rules: Rule[] };
@@ -146,7 +147,13 @@ function DepositDrivePanel({ manageConnection = true }: { manageConnection?: boo
   const [revision, setRevision] = useState(0);
   const [files, setFiles] = useState<FileRow[]>([]);
   const [category, setCategory] = useState("proofs");
+  const [page, setPage] = useState(1);
+  const [drivePages, setDrivePages] = useState<string[]>([]);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [hasNext, setHasNext] = useState(false);
+  const pageToken = drivePages.at(-1);
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [loadingFiles, setLoadingFiles] = useState(true);
 
   useEffect(() => {
@@ -166,10 +173,18 @@ function DepositDrivePanel({ manageConnection = true }: { manageConnection?: boo
           setFiles([]);
           return;
         }
-        const result = await api<FileRow[] | { files: FileRow[] }>(
-          `/restaurant/deposits/drive/files?category=${category}`, { signal }
+        const query = new URLSearchParams({ category });
+        if (appliedSearch) query.set("search", appliedSearch);
+        if (category === "proofs") query.set("page", String(page));
+        if (category === "general" && pageToken) query.set("pageToken", pageToken);
+        const result = await api<FileRow[] | NumberedPage<FileRow> | { files: FileRow[]; nextPageToken?: string }>(
+          `/restaurant/deposits/drive/files?${query}`, { signal }
         );
-        if (!signal.aborted) setFiles(Array.isArray(result) ? result : result.files);
+        if (!signal.aborted) {
+          setFiles(Array.isArray(result) ? result.slice(0, 10) : "items" in result ? result.items : result.files);
+          setHasNext(!Array.isArray(result) && "hasNext" in result && result.hasNext);
+          setNextPageToken(!Array.isArray(result) && "files" in result ? result.nextPageToken ?? null : null);
+        }
       } catch (reason) {
         if (!signal.aborted) setLoadError(reason instanceof Error ? reason.message : "Error de conexión");
       } finally {
@@ -182,7 +197,7 @@ function DepositDrivePanel({ manageConnection = true }: { manageConnection?: boo
       request?.abort();
       window.removeEventListener("focus", refresh);
     };
-  }, [api, category, revision]);
+  }, [api, category, page, pageToken, revision, appliedSearch]);
 
   async function connect() {
     setBusy(true);
@@ -217,17 +232,13 @@ function DepositDrivePanel({ manageConnection = true }: { manageConnection?: boo
 
   const connected = state?.status === "connected";
   const showGiftCardProofs = category === "proofs" && owner && moduleEnabled(bootstrap, "giftCards");
-  const giftQuery = giftCardHistoryQuery({ ...emptyDepositFilters, search });
+  const giftQuery = giftCardHistoryQuery({ ...emptyDepositFilters, search: appliedSearch });
   const foldersReady = Boolean(state?.rootFolderId && state.proofsFolderId && state.generalFolderId);
   const folderIds = [
     { label: "Carpeta raíz", id: state?.rootFolderId },
     { label: "Comprobantes", id: state?.proofsFolderId },
     { label: "Archivos generales", id: state?.generalFolderId }
   ];
-  const visibleFiles = files.filter((file) =>
-    [file.name, file.originalName, file.request?.deposit.reservation.code, file.request?.deposit.reservation.fullName]
-      .some((value) => value?.toLowerCase().includes(search.trim().toLowerCase()))
-  );
   const primary = "rounded-full bg-brand-orange px-4 py-2 font-bold text-white disabled:opacity-50";
   const secondary = "rounded-full border px-4 py-2 text-sm disabled:opacity-50";
 
@@ -311,24 +322,36 @@ function DepositDrivePanel({ manageConnection = true }: { manageConnection?: boo
         <select className="foodie-input max-w-xs" aria-label="Tipo de archivo" value={category} onChange={(event) => {
           if (event.target.value !== category) {
             setLoadingFiles(true);
+            setPage(1);
+            setDrivePages([]);
+            setHasNext(false);
+            setNextPageToken(null);
             setCategory(event.target.value);
           }
         }}>
           <option value="proofs">Comprobantes</option>
           <option value="general">Archivos generales</option>
         </select>
-        <input className="foodie-input max-w-md" aria-label="Buscar archivos" placeholder="Buscar archivo, cliente o código" maxLength={120} value={search} onChange={(event) => setSearch(event.target.value)} />
+        <form className="flex flex-wrap gap-2" onSubmit={event => {
+          event.preventDefault();
+          setPage(1);
+          setDrivePages([]);
+          setAppliedSearch(search.trim());
+        }}>
+          <input className="foodie-input max-w-md" aria-label="Buscar archivos" placeholder="Buscar archivo, cliente o código" maxLength={120} value={search} onChange={(event) => setSearch(event.target.value)} />
+          <button type="submit" className={secondary}>Buscar</button>
+        </form>
       </div>
       <div className="space-y-2">
         {category === "proofs" && <h3 className="text-sm font-bold">Señas de reservas</h3>}
         {loadError && <p role="alert" className="text-red-700">{loadError}</p>}
         {loadingFiles && <p role="status" className="text-sm">Cargando archivos…</p>}
-        {!loadingFiles && !loadError && visibleFiles.length === 0 && (
+        {!loadingFiles && !loadError && files.length === 0 && (
           <p className="text-sm text-neutral-600">{category === "proofs" ? "No hay comprobantes de reservas para esta búsqueda."
             : !state?.generalFolderId ? "Configurá la carpeta de Drive para ver los archivos generales."
-            : search.trim() ? "No se encontraron archivos." : "Todavía no hay archivos en esta sección."}</p>
+            : appliedSearch ? "No se encontraron archivos para esta búsqueda." : "Todavía no hay archivos en esta sección."}</p>
         )}
-        {!loadingFiles && !loadError && visibleFiles.map((file) => (
+        {!loadingFiles && !loadError && files.map((file) => (
           <div key={file.id} className="rounded-xl border p-3 text-sm">
             <strong>{file.originalName || file.name}</strong>
             {file.request && <p>{file.request.deposit.reservation.fullName} · Reserva {file.request.deposit.reservation.code}</p>}
@@ -337,6 +360,11 @@ function DepositDrivePanel({ manageConnection = true }: { manageConnection?: boo
             {(file.driveFileUrl || file.webViewLink) && <a href={file.driveFileUrl || file.webViewLink} target="_blank" rel="noreferrer" className="font-bold text-brand-orange">Abrir en Drive</a>}
           </div>
         ))}
+        {category === "proofs" ? <ListPagination page={page} hasNext={hasNext && !loadError} loading={loadingFiles}
+          onPrevious={() => setPage(page - 1)} onNext={() => setPage(page + 1)} />
+          : <ListPagination page={drivePages.length + 1} hasNext={Boolean(nextPageToken) && !loadError} loading={loadingFiles}
+            onPrevious={() => setDrivePages(current => current.slice(0, -1))}
+            onNext={() => { if (nextPageToken) setDrivePages(current => [...current, nextPageToken]); }} />}
       </div>
       {showGiftCardProofs && <div className="border-t border-brand-line pt-4">
         <GiftCardProofHistory key={giftQuery} query={giftQuery} refreshKey={revision} />

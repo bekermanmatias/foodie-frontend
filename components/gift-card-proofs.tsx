@@ -5,6 +5,7 @@ import { Download, Maximize2, Minimize2, Minus, Plus, RotateCw } from "lucide-re
 import { useDepositApi } from "./deposits/deposits-panel";
 import { useWorkspace } from "./workspace-provider";
 import { moduleEnabled } from "../lib/restaurant-features";
+import { ListPagination } from "./deposits/list-pagination";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 const button = "rounded-full border border-brand-line px-3 py-1.5 text-sm font-semibold disabled:opacity-50";
@@ -14,9 +15,14 @@ type GiftCardProof = {
   order: { id: string; purchaserName: string; amount: string | number; currency: string; status: string; paymentStatus: string; product?: { name: string } | null; delivery?: GiftCardDeliveryState };
 };
 
-export function useGiftCardProofs(query: string, enabled: boolean) {
+export function useGiftCardProofs(query: string, enabled: boolean, refreshKey = 0) {
   const api = useDepositApi();
-  const [proofs, setProofs] = useState<GiftCardProof[]>([]);
+  const [paging, setPaging] = useState<{ query: string; tokens: string[] }>({ query, tokens: [] });
+  const tokens = paging.query === query ? paging.tokens : [];
+  const pageToken = tokens.at(-1);
+  type Result = { items: GiftCardProof[]; nextPageToken: string | null };
+  const [loaded, setLoaded] = useState<{ query: string; pageToken?: string; result: Result } | null>(null);
+  const result = loaded?.query === query && loaded.pageToken === pageToken ? loaded.result : null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
@@ -30,59 +36,41 @@ export function useGiftCardProofs(query: string, enabled: boolean) {
       const { signal } = controller;
       setLoading(true);
       setError("");
-      void api<GiftCardProof[]>(`/restaurant/gift-cards/proofs${query}`, { signal })
-        .then(data => { if (!signal.aborted) setProofs(data); })
+      const params = new URLSearchParams(query);
+      if (pageToken) params.set("pageToken", pageToken);
+      void api<Result>(`/restaurant/gift-cards/proofs/history?${params}`, { signal })
+        .then(data => { if (!signal.aborted) setLoaded({ query, pageToken, result: data }); })
         .catch((reason: Error) => { if (!signal.aborted) setError(reason.message); })
         .finally(() => { if (!signal.aborted) setLoading(false); });
     }
-    setProofs([]);
     load();
     window.addEventListener("focus", load);
     return () => { controller?.abort(); window.removeEventListener("focus", load); };
-  }, [api, enabled, query, revision]);
-  return { proofs, loading, error, refresh };
+  }, [api, enabled, query, pageToken, refreshKey, revision]);
+  return {
+    proofs: result?.items ?? [], loading: loading || (!result && !error), error, refresh, page: tokens.length + 1,
+    hasNext: Boolean(result?.nextPageToken) && !error,
+    onPrevious: () => setPaging({ query, tokens: tokens.slice(0, -1) }),
+    onNext: () => {
+      if (result?.nextPageToken) setPaging({ query, tokens: [...tokens, result.nextPageToken] });
+    }
+  };
 }
 
 export function GiftCardProofHistory({ refreshKey, query }: { refreshKey: number; query: string }) {
-  const api = useDepositApi();
   const { bootstrap, currentUser } = useWorkspace();
   const enabled = currentUser?.role === "restaurant_owner" && moduleEnabled(bootstrap, "giftCards");
-  const [pages, setPages] = useState<string[]>([]);
-  const [result, setResult] = useState<{ items: GiftCardProof[]; nextPageToken: string | null }>({ items: [], nextPageToken: null });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [revision, setRevision] = useState(0);
-  const pageToken = pages.at(-1);
-  useEffect(() => {
-    if (!enabled) return;
-    const controller = new AbortController();
-    const { signal } = controller;
-    const params = new URLSearchParams(query);
-    if (pageToken) params.set("pageToken", pageToken);
-    setLoading(true);
-    setError("");
-    void api<typeof result>(`/restaurant/gift-cards/proofs/history?${params}`, { signal })
-      .then(data => { if (!signal.aborted) setResult(data); })
-      .catch((reason: Error) => { if (!signal.aborted) setError(reason.message); })
-      .finally(() => { if (!signal.aborted) setLoading(false); });
-    return () => controller.abort();
-  }, [api, enabled, pageToken, query, refreshKey, revision]);
+  const { proofs, loading, error, refresh, ...pagination } = useGiftCardProofs(query, enabled, refreshKey);
   if (!enabled) return null;
   return <section className="space-y-2">
     <h3 className="text-sm font-bold">Gift Cards</h3>
     {error ? <p role="alert" className="text-sm text-red-700">{error}</p>
       : loading ? <p role="status" className="text-sm text-neutral-600">Cargando comprobantes…</p>
-      : result.items.length ? <GiftCardProofList proofs={result.items} onReviewed={() => setRevision(value => value + 1)} showSend />
-      : <p className="text-sm text-neutral-600">{result.nextPageToken ? "No hay coincidencias en esta página. Podés buscar entre los comprobantes más antiguos."
-        : query ? "No hay comprobantes de Gift Cards para estos filtros." : pages.length
+      : proofs.length ? <GiftCardProofList proofs={proofs} onReviewed={refresh} showSend />
+      : <p className="text-sm text-neutral-600">{pagination.hasNext ? "No hay coincidencias en esta página. Podés buscar entre los comprobantes más antiguos."
+        : query ? "No hay comprobantes de Gift Cards para estos filtros." : pagination.page > 1
           ? "No hay comprobantes de Gift Cards en esta página." : "Todavía no hay comprobantes de Gift Cards."}</p>}
-    {(pages.length > 0 || result.nextPageToken) && <div className="flex flex-wrap gap-2">
-      {pages.length > 0 && <button type="button" disabled={loading} className={button} onClick={() => setPages(current => current.slice(0, -1))}>Más recientes</button>}
-      {result.nextPageToken && <button type="button" disabled={loading || Boolean(error)} className={button} onClick={() => {
-        const next = result.nextPageToken;
-        if (next) setPages(current => [...current, next]);
-      }}>Más antiguos</button>}
-    </div>}
+    <ListPagination {...pagination} loading={loading} />
   </section>;
 }
 

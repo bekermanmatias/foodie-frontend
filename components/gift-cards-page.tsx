@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useWorkspace } from "./workspace-provider";
 import { WorkspaceShell } from "./workspace-shell";
 import { GiftCardProofList, useGiftCardProofs } from "./gift-card-proofs";
+import { ListPagination } from "./deposits/list-pagination";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 type Product = { id?: string; name: string; type: "FIXED_MENU" | "OPEN_AMOUNT"; description: string; price: number | null; minAmount: number | null; maxAmount: number | null; partySize: number | null; currency: string; validityDays: number; excludedDates: string[]; restrictions: Record<string, unknown> | null; paymentAlias: string | null; paymentCbu: string | null; paymentHolder: string | null; isActive: boolean };
@@ -82,7 +83,8 @@ function ProductForm({ value, setValue, save, saving }: { value: Product; setVal
 function Orders({ data, products, filters, onFilter, clearFilters, onPage, payment, cancel, cancelCard, refreshArtwork, remove, send, actionId, loading, canManage, reloadOrders }: { data: OrderPage; products: Product[]; filters: OrderFilters; onFilter: (key: keyof OrderFilters, value: string) => void; clearFilters: () => void; onPage: (page: number) => void; payment: (id: string, approved: boolean) => void; cancel: (id: string) => void; cancelCard: (orderId: string, cardId: string) => void; refreshArtwork: (orderId: string, cardId: string) => void; remove: (id: string) => void; send: (id: string, resend?: boolean) => void; actionId: string | null; loading: boolean; canManage: boolean; reloadOrders: () => void }) {
   const totalPages = Math.max(1, data.totalPages);
   const orderIds = data.items.map(order => order.id).join(",");
-  const { proofs, error: proofError, refresh: refreshProofs } = useGiftCardProofs(`?orderIds=${encodeURIComponent(orderIds)}`, canManage && Boolean(orderIds));
+  const { proofs, loading: loadingProofs, error: proofError, refresh: refreshProofs, ...proofPagination } =
+    useGiftCardProofs(`orderIds=${encodeURIComponent(orderIds)}`, canManage && Boolean(orderIds));
   return <section className="space-y-4">
     <div className="rounded-2xl border border-brand-line bg-white p-4"><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       <label className="text-sm font-semibold">Desde<input type="date" value={filters.from} onChange={(e) => onFilter("from", e.target.value)} className="foodie-input mt-1" /></label>
@@ -94,6 +96,10 @@ function Orders({ data, products, filters, onFilter, clearFilters, onPage, payme
       <label className="text-sm font-semibold md:col-span-2">Buscar<input value={filters.search} onChange={(e) => onFilter("search", e.target.value)} placeholder="Cliente, teléfono, código u orden" className="foodie-input mt-1" /></label>
     </div><div className="mt-3 flex justify-end"><button onClick={clearFilters} className="rounded-full border border-brand-line px-4 py-2 text-sm font-bold">Limpiar filtros</button></div></div>
     {canManage && proofError && <p role="alert" className="text-sm text-red-700">No se pudieron cargar los comprobantes. {proofError} <button type="button" className="font-semibold underline" onClick={refreshProofs}>Reintentar</button></p>}
+    {canManage && (proofPagination.hasNext || proofPagination.page > 1) && <div className="space-y-1">
+      <h2 className="text-sm font-bold">Comprobantes de estas órdenes</h2>
+      <ListPagination {...proofPagination} loading={loadingProofs} />
+    </div>}
     {loading ? <p className="rounded-2xl bg-white p-6 text-sm text-neutral-500">Cargando órdenes...</p> : data.items.length === 0 ? <p className="rounded-2xl bg-white p-6 text-sm text-neutral-500">No hay órdenes para estos filtros.</p> : data.items.map((order) => {
       const busy = actionId === order.id;
       const orderProofs = canManage ? proofs.filter(proof => proof.order.id === order.id) : [];
@@ -110,7 +116,7 @@ function Orders({ data, products, filters, onFilter, clearFilters, onPage, payme
             <p className="mt-2 text-sm font-semibold">Pago: {order.paymentStatus} · Estado: {order.status}{cards.length ? ` · Enviadas: ${sentCount}/${activeCards.length}` : ""}</p>
           </div>
           <div className="flex flex-wrap gap-2">{canManage ? <>
-            {!orderProofs.length && order.paymentStatus === "PENDING" && order.status !== "CANCELLED" ? <><button disabled={busy} onClick={() => payment(order.id, true)} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white"><Check className="mr-1 inline h-4 w-4" />Confirmar</button><button disabled={busy} onClick={() => payment(order.id, false)} className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-600"><X className="mr-1 inline h-4 w-4" />Rechazar</button></> : null}
+            {!orderProofs.length && !loadingProofs && !proofError && proofPagination.page === 1 && !proofPagination.hasNext && order.paymentStatus === "PENDING" && order.status !== "CANCELLED" ? <><button disabled={busy} onClick={() => payment(order.id, true)} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white"><Check className="mr-1 inline h-4 w-4" />Confirmar</button><button disabled={busy} onClick={() => payment(order.id, false)} className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-600"><X className="mr-1 inline h-4 w-4" />Rechazar</button></> : null}
             {canCancel ? <button disabled={busy} onClick={() => cancel(order.id)} className="rounded-full border border-orange-200 px-4 py-2 text-sm font-bold text-orange-700">Cancelar</button> : null}
             {canSend ? <button disabled={busy} onClick={() => send(order.id, sentCount === activeCards.length)} className="rounded-full bg-brand-orange px-4 py-2 text-sm font-bold text-white disabled:opacity-40"><Send className="mr-1 inline h-4 w-4" />{busy ? "Enviando..." : sentCount === activeCards.length ? "Reenviar activas" : sentCount > 0 ? "Reintentar pendientes" : "Enviar"}</button> : null}
             <button disabled={busy} onClick={() => remove(order.id)} className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-600"><Trash2 className="mr-1 inline h-4 w-4" />Eliminar</button>
