@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useWorkspace } from "../workspace-provider";
 import { WorkspaceShell } from "../workspace-shell";
@@ -10,6 +11,17 @@ type Rule = { id: string; label: string; minPeople: number; maxPeople: number | 
 type Settings = { reviewed: boolean; currency: string; bankAlias: string; bankCbu: string; bankHolder: string; paymentHours: number; rules: Rule[] };
 type DriveState = { demo: boolean; status: string; rootFolderId?: string; proofsFolderId?: string; generalFolderId?: string; error?: string };
 type FileRow = { id: string; originalName?: string; name?: string; receivedAt?: string; driveFileUrl?: string; webViewLink?: string; driveStatus?: string; request?: { deposit: { reservation: { code: string; fullName: string } } } };
+
+export function DocumentsPage() {
+  const { bootstrap, currentUser } = useWorkspace();
+  const allowed = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager"].includes(currentUser.role);
+
+  return <WorkspaceShell title="Documentos" description="Consultá los archivos generales y comprobantes de este restaurante.">
+    {!allowed ? <p>Solo el dueño y el gerente pueden consultar documentos.</p>
+      : !moduleEnabled(bootstrap, "deposits") ? <p>Habilitá Señas y pagos para consultar los archivos del restaurante.</p>
+      : <DepositDrivePanel initialCategory="general" manageConnection={false} />}
+  </WorkspaceShell>;
+}
 
 export function DepositsPage({ initialTab = "deposits", driveConnection }: {
   initialTab?: "deposits" | "drive";
@@ -119,10 +131,14 @@ function driveFolderId(input: string) {
   }
 }
 
-function DepositDrivePanel() {
+function DepositDrivePanel({ initialCategory = "proofs", manageConnection = true }: {
+  initialCategory?: "proofs" | "general";
+  manageConnection?: boolean;
+}) {
   const api = useDepositApi();
   const { currentUser } = useWorkspace();
   const owner = currentUser?.role === "restaurant_owner";
+  const canManage = owner && manageConnection;
   const [state, setState] = useState<DriveState | null>(null);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
@@ -132,7 +148,7 @@ function DepositDrivePanel() {
   const [copyMessage, setCopyMessage] = useState("");
   const [revision, setRevision] = useState(0);
   const [files, setFiles] = useState<FileRow[]>([]);
-  const [category, setCategory] = useState("proofs");
+  const [category, setCategory] = useState<string>(initialCategory);
   const [search, setSearch] = useState("");
   const [loadingFiles, setLoadingFiles] = useState(true);
 
@@ -225,12 +241,12 @@ function DepositDrivePanel() {
       {state?.error && <p className="text-orange-800">{state.error}</p>}
       {state && (
         <div className="flex flex-wrap items-center gap-2">
-          {owner && !state.demo && (
+          {canManage && !state.demo && (
             <button type="button" disabled={busy} onClick={() => void connect()} className={connected ? secondary : primary}>
               {connected || state.status === "reconnect_required" ? "Reconectar Google" : "Conectar Google"}
             </button>
           )}
-          {owner && (connected || state.demo) && !foldersReady && (
+          {canManage && (connected || state.demo) && !foldersReady && (
             <button type="button" disabled={busy} onClick={() => void setup()} className={primary}>
               {busy ? "Configurando…" : "Configurar carpeta Foodie"}
             </button>
@@ -240,14 +256,15 @@ function DepositDrivePanel() {
               Abrir carpeta en Drive
             </a>
           )}
-          {owner && connected && !state.demo && (
+          {canManage && connected && !state.demo && (
             <button type="button" className={secondary} disabled={busy} aria-expanded={showFolderLink} onClick={() => setShowFolderLink(!showFolderLink)}>
               {showFolderLink ? "Cancelar" : foldersReady ? "Cambiar carpeta" : "Usar una carpeta existente"}
             </button>
           )}
+          {owner && !manageConnection && <Link href="/senas?tab=drive" className={secondary}>Configurar Drive</Link>}
         </div>
       )}
-      {owner && connected && showFolderLink && (
+      {canManage && connected && showFolderLink && (
         <form className="space-y-2" onSubmit={(event) => {
           event.preventDefault();
           if (busy) return;
@@ -265,7 +282,7 @@ function DepositDrivePanel() {
           </div>
         </form>
       )}
-      {owner && connected && foldersReady && !state?.demo && (
+      {canManage && connected && foldersReady && !state?.demo && (
         <div className="space-y-2 rounded-xl border border-brand-line p-3">
           <h3 className="text-sm font-semibold">IDs de carpetas</h3>
           <dl className="divide-y divide-brand-line">
