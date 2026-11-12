@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Download, Maximize2, Minimize2, Minus, Plus, RotateCw } from "lucide-react";
 import { useDepositApi } from "./deposits/deposits-panel";
 import { useWorkspace } from "./workspace-provider";
 import { moduleEnabled } from "../lib/restaurant-features";
@@ -97,6 +98,66 @@ function formatAmount(order: GiftCardProof["order"]) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: order.currency }).format(Number(order.amount));
 }
 
+function ReceiptPreview({ url, name, mimeType, expanded, onExpand }: {
+  url: string; name: string; mimeType: string; expanded: boolean; onExpand: () => void;
+}) {
+  const viewport = useRef<HTMLDivElement>(null);
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [viewSize, setViewSize] = useState({ width: 0, height: 0 });
+  const [zoom, setZoom] = useState(100);
+  const [rotation, setRotation] = useState(0);
+  const isImage = mimeType.startsWith("image/");
+  useEffect(() => {
+    const element = viewport.current;
+    if (!element) return;
+    const measure = () => setViewSize({ width: element.clientWidth, height: element.clientHeight });
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [isImage]);
+
+  const sideways = rotation % 180 !== 0;
+  const rotatedWidth = sideways ? imageSize.height : imageSize.width;
+  const rotatedHeight = sideways ? imageSize.width : imageSize.height;
+  const ready = Boolean(rotatedWidth && rotatedHeight && viewSize.width && viewSize.height);
+  const fit = ready ? Math.min(viewSize.width / rotatedWidth, viewSize.height / rotatedHeight) : 0;
+  const scale = fit * zoom / 100;
+  const height = expanded ? "h-[min(68dvh,800px)]" : "h-[min(53dvh,580px)]";
+  const control = `${button} inline-flex items-center justify-center gap-1.5 bg-white`;
+
+  return <div className="space-y-2">
+    <div role="group" aria-label="Controles del visor" className="flex flex-wrap items-center gap-1.5">
+      {isImage && <>
+        <button type="button" className={control} aria-label="Reducir zoom" disabled={!ready || zoom <= 100} onClick={() => setZoom(value => Math.max(100, value - 25))}><Minus className="h-4 w-4" aria-hidden="true" /></button>
+        <output aria-live="polite" aria-label="Zoom respecto al ajuste" className="min-w-12 text-center text-sm font-semibold tabular-nums">{zoom}%</output>
+        <button type="button" className={control} aria-label="Aumentar zoom" disabled={!ready || zoom >= 400} onClick={() => setZoom(value => Math.min(400, value + 25))}><Plus className="h-4 w-4" aria-hidden="true" /></button>
+        <button type="button" className={control} disabled={!ready || zoom === 100} onClick={() => setZoom(100)}>Ajustar</button>
+        <button type="button" className={control} disabled={!ready} onClick={() => setRotation(value => (value + 90) % 360)}><RotateCw className="h-4 w-4" aria-hidden="true" />Girar</button>
+      </>}
+      <button type="button" className={control} aria-pressed={expanded} onClick={onExpand}>
+        {expanded ? <Minimize2 className="h-4 w-4" aria-hidden="true" /> : <Maximize2 className="h-4 w-4" aria-hidden="true" />}
+        {expanded ? "Reducir visor" : "Ampliar visor"}
+      </button>
+      <a className={control} href={url} download={name}><Download className="h-4 w-4" aria-hidden="true" />Descargar</a>
+    </div>
+    {isImage ? <div ref={viewport} role="region" aria-label="Vista del comprobante" tabIndex={0} className={`${height} overflow-auto rounded-xl bg-neutral-100`}>
+      <div className="relative" style={{ width: Math.max(viewSize.width, Math.round(rotatedWidth * scale)), height: Math.max(viewSize.height, Math.round(rotatedHeight * scale)) }}>
+        {/* The preview is a private blob URL supplied by the authenticated request. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="Comprobante de Gift Card" draggable={false} onLoad={event => {
+          const image = event.currentTarget;
+          setImageSize({ width: image.naturalWidth, height: image.naturalHeight });
+        }} className="absolute left-1/2 top-1/2 max-w-none" style={{
+          width: imageSize.width * scale,
+          height: imageSize.height * scale,
+          transform: `translate(-50%, -50%) rotate(${rotation}deg)`
+        }} />
+      </div>
+    </div> : <iframe src={url} title="Vista del comprobante" className={`${height} w-full rounded-xl bg-neutral-100`} />}
+  </div>;
+}
+
 function GiftCardProofDialog({ proof, onClose, onReviewed }: {
   proof: GiftCardProof; onClose: () => void; onReviewed: (approved: boolean) => void;
 }) {
@@ -108,6 +169,7 @@ function GiftCardProofDialog({ proof, onClose, onReviewed }: {
   const [decision, setDecision] = useState<"approve" | "reject" | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const orderPath = `/restaurant/gift-cards/orders/${encodeURIComponent(proof.order.id)}`;
   useEffect(() => { dialog.current?.showModal(); }, []);
   useEffect(() => {
@@ -143,12 +205,12 @@ function GiftCardProofDialog({ proof, onClose, onReviewed }: {
     }
   }
 
-  return <dialog ref={dialog} aria-label="Revisar comprobante de Gift Card" className="w-[min(92vw,760px)] max-w-none rounded-2xl bg-white p-4 backdrop:bg-black/60" onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
+  return <dialog ref={dialog} aria-label="Revisar comprobante de Gift Card" className={`${expanded ? "w-[96vw]" : "w-[min(92vw,860px)]"} max-h-[95dvh] max-w-none rounded-2xl bg-white p-4 backdrop:bg-black/60`} onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
     <div className="mb-3 flex items-start justify-between gap-3">
       <div><h2 className="text-lg font-bold">Comprobante de Gift Card</h2><p className="text-sm text-neutral-600">{proof.order.purchaserName} · {formatAmount(proof.order)} · {paymentLabel(proof.order)}</p></div>
       <button type="button" className={button} disabled={busy} onClick={onClose}>Cerrar</button>
     </div>
-    {preview ? <iframe src={preview} title="Vista del comprobante" className="h-[min(52vh,520px)] w-full rounded-xl bg-neutral-100" />
+    {preview ? <ReceiptPreview key={preview} url={preview} name={proof.name} mimeType={proof.mimeType} expanded={expanded} onExpand={() => setExpanded(value => !value)} />
       : !error && <p role="status" className="py-8 text-sm">Cargando comprobante…</p>}
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
     {preview && canReview(proof.order) && <div className="mt-3 space-y-2">
