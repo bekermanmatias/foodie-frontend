@@ -9,12 +9,28 @@ type Settings = { reviewed: boolean; currency: string; bankAlias: string; bankCb
 type DriveState = { demo: boolean; status: string; rootFolderId?: string; proofsFolderId?: string; generalFolderId?: string; error?: string };
 type FileRow = { id: string; originalName?: string; name?: string; receivedAt?: string; driveFileUrl?: string; webViewLink?: string; driveStatus?: string; request?: { deposit: { reservation: { code: string; fullName: string } } } };
 
-export function DepositsPage() {
+export function DepositsPage({ initialTab = "deposits", driveConnection }: {
+  initialTab?: "deposits" | "drive";
+  driveConnection?: "cancelled" | "failed";
+}) {
   const { currentUser } = useWorkspace();
-  const [tab, setTab] = useState("deposits");
+  const [tab, setTab] = useState<"deposits" | "drive" | "settings">(initialTab);
   const allowed = currentUser && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role);
   return <WorkspaceShell title="Señas y pagos" description="Comprobantes y acreditaciones. La confirmación de la reserva siempre es manual.">
-    {!allowed ? <p>No tenés permiso para acceder al módulo financiero.</p> : <div className="space-y-5"><nav className="flex flex-wrap gap-2" aria-label="Secciones de señas"><button className="rounded-full border px-4 py-2 font-bold" onClick={() => setTab("deposits")}>Señas y comprobantes</button><button className="rounded-full border px-4 py-2 font-bold" onClick={() => setTab("drive")}>Archivos y Drive</button>{currentUser?.role === "restaurant_owner" && <button className="rounded-full border px-4 py-2 font-bold" onClick={() => setTab("settings")}>Reglas y transferencia</button>}</nav>{tab === "deposits" ? <DepositsPanel /> : tab === "settings" ? <DepositSettingsForm /> : <DepositDrivePanel />}</div>}
+    {!allowed ? <p>No tenés permiso para acceder al módulo financiero.</p> : <div className="space-y-5">
+      <nav className="flex flex-wrap gap-2" aria-label="Secciones de señas">
+        <button className="rounded-full border px-4 py-2 font-bold" onClick={() => setTab("deposits")}>Señas y comprobantes</button>
+        <button className="rounded-full border px-4 py-2 font-bold" onClick={() => setTab("drive")}>Archivos y Drive</button>
+        {currentUser?.role === "restaurant_owner" && <button className="rounded-full border px-4 py-2 font-bold" onClick={() => setTab("settings")}>Reglas y transferencia</button>}
+      </nav>
+      {tab === "deposits" && <DepositsPanel />}
+      {tab === "settings" && <DepositSettingsForm />}
+      {tab === "drive" && <>
+        {driveConnection === "cancelled" && <p role="status">Cancelaste la autorización de Google.</p>}
+        {driveConnection === "failed" && <p role="alert" className="text-red-700">No se pudo completar la conexión con Google. Volvé a intentarlo desde esta pantalla.</p>}
+        <DepositDrivePanel />
+      </>}
+    </div>}
   </WorkspaceShell>;
 }
 
