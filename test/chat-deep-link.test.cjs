@@ -37,3 +37,18 @@ test('missing, expired and unauthorized conversations give actionable errors; re
   const controller = new AbortController(); controller.abort();
   assert.equal(await loadLinkedConversation(chat.chatId, user, controller.signal), null);
 });
+
+test('shows the image for a legacy Gift Card pair and keeps distinct WhatsApp sends', async () => {
+  const timestamp = '2026-11-12T20:24:00Z';
+  const content = 'Gift Card ABCDEFGH';
+  const message = { chatId: chat.chatId, sender: 'bot', timestamp, content };
+  const original = { ...message, messageId: 'wamid.original', source: 'gift_card' };
+  const duplicate = { ...message, messageId: 'giftcard-order-1760000000000', mediaType: 'image', mediaUrl: '/gift-card.png' };
+  const resend = { ...original, messageId: 'wamid.resend', mediaUrl: '/updated-card.png', timestamp: '2026-11-12T20:24:06Z' };
+  const text = { ...message, messageId: 'wamid.text' };
+  chatApi.defaults.adapter = async config => ({
+    config, status: 200, headers: {}, data: { chat, messages: [original, duplicate, resend, text] }
+  });
+  const result = await loadLinkedConversation(chat.chatId, user);
+  assert.deepEqual(result.messages, [duplicate, resend, text]);
+});

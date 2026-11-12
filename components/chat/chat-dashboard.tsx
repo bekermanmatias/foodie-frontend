@@ -661,7 +661,7 @@ export function ChatDashboard() {
               </header>
 
               {canViewProofs && activeChat.phoneNumber && proofsChatId === activeChat.chatId ? (
-                <ChatProofsPanel key={activeChat.chatId} phone={activeChat.phoneNumber} showDeposits={canViewDepositProofs} showGiftCards={canViewGiftProofs} />
+                <ChatProofsPanel key={activeChat.chatId} chatId={activeChat.chatId} phone={activeChat.phoneNumber} showDeposits={canViewDepositProofs} showGiftCards={canViewGiftProofs} />
               ) : null}
               <div ref={messagesContainerRef} className="chat-messages flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)] px-4 py-5 md:px-6 xl:px-4 xl:py-4">
                 {Object.keys(messageGroups)

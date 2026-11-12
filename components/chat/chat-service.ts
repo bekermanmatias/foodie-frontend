@@ -19,6 +19,8 @@ export interface Chat {
 
 export interface Message {
   id: string;
+  messageId?: string;
+  source?: string | null;
   chatId: string;
   sender: "user" | "bot";
   content: string;
@@ -51,6 +53,26 @@ export interface ChatWithMessages {
   messages: Message[];
 }
 
+function mergeLegacyGiftCardMessages(messages: Message[]): Message[] {
+  const legacyImages = messages.filter(message =>
+    message.sender === "bot" && message.mediaType === "image" && message.mediaUrl &&
+    /^giftcard-.+-\d+$/.test(message.messageId ?? ""));
+  if (!legacyImages.length) return messages;
+
+  const matched = new Set<Message>();
+  const hidden = new Set<Message>();
+  for (const message of messages) {
+    if (message.source !== "gift_card" || message.sender !== "bot" || !message.messageId?.startsWith("wamid.")) continue;
+    const image = legacyImages.find(candidate =>
+      !matched.has(candidate) && candidate.chatId === message.chatId && candidate.content === message.content &&
+      Math.abs(new Date(candidate.timestamp).getTime() - new Date(message.timestamp).getTime()) <= 5000);
+    if (!image) continue;
+    matched.add(image);
+    hidden.add(message.mediaUrl ? image : message);
+  }
+  return messages.filter(message => !hidden.has(message));
+}
+
 export const chatService = {
   async getChats(clientId: string | undefined, skip: number, limit: number): Promise<Chat[]> {
     const params: Record<string, string | number> = { skip, limit };
@@ -61,7 +83,8 @@ export const chatService = {
 
   async getChatWithMessages(chatId: string, signal?: AbortSignal): Promise<ChatWithMessages> {
     const response = await chatApi.get(`/chats/${encodeURIComponent(chatId)}`, { signal });
-    return response.data;
+    const data: ChatWithMessages = response.data;
+    return { ...data, messages: mergeLegacyGiftCardMessages(data.messages) };
   },
 
   async changeChatStatus(chatId: string, status: "bot" | "human"): Promise<Chat> {

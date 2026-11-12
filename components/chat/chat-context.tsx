@@ -21,6 +21,7 @@ type ChatContextValue = {
   deleteMessage: (messageId: string) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   refreshChats: () => void;
+  refreshActiveChat: (chatId: string) => Promise<void>;
   loadMoreChats: () => void;
   hasMore: boolean;
   isLoadingMore: boolean;
@@ -67,6 +68,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [searchHint, setSearchHint] = useState<string | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
   const searchRequestRef = useRef(0);
+  const activeChatIdRef = useRef<string | undefined>(undefined);
+  const messageRequestRef = useRef(0);
+
+  useEffect(() => {
+    activeChatIdRef.current = activeChat?.chatId;
+  }, [activeChat?.chatId]);
 
   const token = typeof window !== "undefined" ? window.localStorage.getItem("auth_token") : "";
 
@@ -87,25 +94,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  const loadChatMessages = useCallback(async (chat: Chat) => {
+  const refreshActiveChat = useCallback(async (chatId: string) => {
+    if (activeChatIdRef.current !== chatId) return;
+    const request = ++messageRequestRef.current;
+    const isCurrent = () => activeChatIdRef.current === chatId && request === messageRequestRef.current;
     try {
-      const chatWithMessages = await chatService.getChatWithMessages(chat.chatId);
+      const chatWithMessages = await chatService.getChatWithMessages(chatId);
+      if (!isCurrent()) return;
       // The detail endpoint combines Chat and ChatState, the same control state n8n reads.
       const effectiveState = {
         chatStatus: chatWithMessages.chat.chatStatus,
         statusChangeTime: chatWithMessages.chat.statusChangeTime
       };
-      setActiveChat((current) => current?.chatId === chat.chatId &&
+      setActiveChat((current) => current?.chatId === chatId &&
         (current.chatStatus !== effectiveState.chatStatus || current.statusChangeTime !== effectiveState.statusChangeTime)
         ? { ...current, ...effectiveState } : current);
-      setChats((current) => current.map((item) => item.chatId === chat.chatId &&
-        (item.chatStatus !== effectiveState.chatStatus || item.statusChangeTime !== effectiveState.statusChangeTime)
-        ? { ...item, ...effectiveState } : item));
+      const { lastMessage, lastMessageTimestamp } = chatWithMessages.chat;
+      setChats((current) => current.map((item) => item.chatId === chatId
+        ? { ...item, ...effectiveState, lastMessage, lastMessageTimestamp } : item));
       const uniqueMessages = Array.from(new Map(chatWithMessages.messages.map((message) => [getMessageKey(message), message])).values());
       const sorted = sortMessages(uniqueMessages);
       setMessages(sorted);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error al cargar mensajes");
+      if (isCurrent()) setError(err.response?.data?.message || "Error al cargar mensajes");
     }
   }, []);
 
@@ -113,7 +124,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     (data: any) => {
       const { chatId, sender, content, timestamp } = data;
       if (activeChat && activeChat.chatId === chatId) {
-        loadChatMessages(activeChat);
+        void refreshActiveChat(chatId);
       }
       setChats((current) => {
         const existing = current.find((chat) => chat.chatId === chatId);
@@ -132,7 +143,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         ];
       });
     },
-    [activeChat, loadChatMessages, refreshChats]
+    [activeChat, refreshActiveChat, refreshChats]
   );
 
   const handleChatStatusChanged = useCallback(
@@ -198,11 +209,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (activeChat) {
-      void loadChatMessages(activeChat);
+      void refreshActiveChat(activeChat.chatId);
     } else {
       setMessages([]);
     }
-  }, [activeChat, loadChatMessages]);
+  }, [activeChat, refreshActiveChat]);
 
   const activeChatId = activeChat?.chatId;
   useEffect(() => {
@@ -492,6 +503,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         deleteMessage,
         deleteChat,
         refreshChats,
+        refreshActiveChat,
         loadMoreChats,
         hasMore,
         isLoadingMore,

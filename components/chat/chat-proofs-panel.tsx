@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { DepositsPanel, type DepositPanelState } from "../deposits/deposits-panel";
 import { GiftCardProofList, useGiftCardProofs } from "../gift-card-proofs";
+import { useChat } from "./chat-context";
 
-export function ChatProofsPanel({ phone, showDeposits, showGiftCards }: {
-  phone: string; showDeposits: boolean; showGiftCards: boolean;
+export function ChatProofsPanel({ chatId, phone, showDeposits, showGiftCards }: {
+  chatId: string; phone: string; showDeposits: boolean; showGiftCards: boolean;
 }) {
+  const { refreshActiveChat } = useChat();
   const [refreshKey, setRefreshKey] = useState(0);
   const [depositState, setDepositState] = useState<DepositPanelState>("loading");
   const { proofs, loading, error, refresh } = useGiftCardProofs(`?phone=${encodeURIComponent(phone)}`, showGiftCards);
@@ -22,7 +24,8 @@ export function ChatProofsPanel({ phone, showDeposits, showGiftCards }: {
       }}>Actualizar</button>
     </div>
     {showGiftCards && error && <p role="alert" className="text-sm text-red-700">No se pudieron cargar los comprobantes de Gift Cards. {error}</p>}
-    {showGiftCards && proofs.length > 0 && <GiftCardProofList proofs={proofs} onReviewed={refresh} showType showSend />}
+    {showGiftCards && proofs.length > 0 && <GiftCardProofList proofs={proofs} onReviewed={refresh}
+      onDelivered={() => void refreshActiveChat(chatId)} showType showSend />}
     {showDeposits && <DepositsPanel phone={phone} compact refreshKey={refreshKey} onPanelState={setDepositState} />}
     {!hasContent && <p role="status" className="text-sm text-neutral-600">
       {pending ? "Cargando comprobantes…" : "Este contacto todavía no tiene comprobantes."}

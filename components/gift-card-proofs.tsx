@@ -83,7 +83,9 @@ export function GiftCardProofHistory({ refreshKey }: { refreshKey: number }) {
   </section>;
 }
 
-export function GiftCardProofList({ proofs, onReviewed, showType = false, showSend = false }: { proofs: GiftCardProof[]; onReviewed: () => void; showType?: boolean; showSend?: boolean }) {
+export function GiftCardProofList({ proofs, onReviewed, onDelivered, showType = false, showSend = false }: {
+  proofs: GiftCardProof[]; onReviewed: () => void; onDelivered?: () => void; showType?: boolean; showSend?: boolean;
+}) {
   const [selected, setSelected] = useState<GiftCardProof | null>(null);
   const [notice, setNotice] = useState("");
   return <>
@@ -99,7 +101,7 @@ export function GiftCardProofList({ proofs, onReviewed, showType = false, showSe
           </button>
           {showSend && proof.order.paymentStatus === "CONFIRMED" && proof.order.status === "PAID"
             && proofs.findIndex(item => item.order.id === proof.order.id) === index && proof.order.delivery
-            && <GiftCardDelivery orderId={proof.order.id} delivery={proof.order.delivery} />}
+            && <GiftCardDelivery orderId={proof.order.id} delivery={proof.order.delivery} onDelivered={onDelivered} />}
         </div>
       </li>)}
     </ul>
@@ -112,7 +114,9 @@ export function GiftCardProofList({ proofs, onReviewed, showType = false, showSe
   </>;
 }
 
-function GiftCardDelivery({ orderId, delivery }: { orderId: string; delivery: GiftCardDeliveryState }) {
+function GiftCardDelivery({ orderId, delivery, onDelivered }: {
+  orderId: string; delivery: GiftCardDeliveryState; onDelivered?: () => void;
+}) {
   const api = useDepositApi();
   const inFlight = useRef(false);
   const [sending, setSending] = useState(false);
@@ -131,6 +135,7 @@ function GiftCardDelivery({ orderId, delivery }: { orderId: string; delivery: Gi
         `/restaurant/gift-cards/orders/${encodeURIComponent(orderId)}/send`, { method: "POST", body: JSON.stringify({ resend: false }) }
       );
       setSent(result.sentCount);
+      if (result.sentCount > sentCount) onDelivered?.();
       if (!result.sent) setError(result.reason === "OUTSIDE_24H_WINDOW"
         ? "El cliente tiene que volver a escribir por WhatsApp antes de reintentar."
         : `${result.sentCount} de ${result.totalCount} enviadas. Podés reintentar las pendientes.`);
