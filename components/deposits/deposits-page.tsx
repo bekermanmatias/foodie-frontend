@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useWorkspace } from "../workspace-provider";
 import { WorkspaceShell } from "../workspace-shell";
 import { DepositsPanel, useDepositApi } from "./deposits-panel";
+import { GiftCardProofsPanel } from "../gift-card-proofs";
 
 type Rule = { id: string; label: string; minPeople: number; maxPeople: number | null; eventId: string | null; mode: "fixed" | "per_person"; amount: number };
 type Settings = { reviewed: boolean; currency: string; bankAlias: string; bankCbu: string; bankHolder: string; paymentHours: number; rules: Rule[] };
@@ -23,7 +24,7 @@ export function DepositsPage({ initialTab = "deposits", driveConnection }: {
         <button className="rounded-full border px-4 py-2 font-bold" onClick={() => setTab("drive")}>Archivos y Drive</button>
         {currentUser?.role === "restaurant_owner" && <button className="rounded-full border px-4 py-2 font-bold" onClick={() => setTab("settings")}>Reglas y transferencia</button>}
       </nav>
-      {tab === "deposits" && <DepositsPanel />}
+      {tab === "deposits" && <><GiftCardProofsPanel /><DepositsPanel /></>}
       {tab === "settings" && <DepositSettingsForm />}
       {tab === "drive" && <>
         {driveConnection === "cancelled" && <p role="status">Cancelaste la autorización de Google.</p>}

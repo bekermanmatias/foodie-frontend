@@ -1,6 +1,7 @@
 "use client";
 
 import { DepositsPanel } from "../deposits/deposits-panel";
+import { GiftCardProofsPanel } from "../gift-card-proofs";
 import { useWorkspace } from "../workspace-provider";
 import { moduleEnabled } from "../../lib/restaurant-features";
 import { format, isToday, isYesterday } from "date-fns";
@@ -121,7 +122,9 @@ function getAvatarText(chat: Chat) {
 export function ChatDashboard() {
   const { user } = useChatAuth();
   const { bootstrap, currentUser } = useWorkspace();
-  const canViewProofs = moduleEnabled(bootstrap, "deposits") && Boolean(currentUser && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role));
+  const canViewDepositProofs = moduleEnabled(bootstrap, "deposits") && Boolean(currentUser && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role));
+  const canViewGiftProofs = currentUser?.role === "restaurant_owner" && moduleEnabled(bootstrap, "giftCards");
+  const canViewProofs = canViewDepositProofs || canViewGiftProofs;
   const [proofsChatId, setProofsChatId] = useState<string | null>(null);
   const {
     chats,
@@ -660,7 +663,8 @@ export function ChatDashboard() {
 
               {canViewProofs && activeChat.phoneNumber && proofsChatId === activeChat.chatId ? (
                 <div id="chat-proofs-panel" className="min-h-0 max-h-[45vh] shrink-0 overflow-auto">
-                  <DepositsPanel key={`deposits-${activeChat.chatId}`} phone={activeChat.phoneNumber} compact expanded />
+                  {canViewGiftProofs && <GiftCardProofsPanel key={`gift-${activeChat.chatId}`} phone={activeChat.phoneNumber} />}
+                  {canViewDepositProofs && <DepositsPanel key={`deposits-${activeChat.chatId}`} phone={activeChat.phoneNumber} compact expanded />}
                 </div>
               ) : null}
               <div ref={messagesContainerRef} className="chat-messages flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)] px-4 py-5 md:px-6 xl:px-4 xl:py-4">
