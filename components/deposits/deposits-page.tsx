@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import { useWorkspace } from "../workspace-provider";
 import { WorkspaceShell } from "../workspace-shell";
-import { DepositsPanel, useDepositApi } from "./deposits-panel";
+import { DepositFilters, DepositsPanel, emptyDepositFilters, useDepositApi, type DepositFilterValues } from "./deposits-panel";
 import { GiftCardProofHistory } from "../gift-card-proofs";
+import { moduleEnabled } from "../../lib/restaurant-features";
 
 type Rule = { id: string; label: string; minPeople: number; maxPeople: number | null; eventId: string | null; mode: "fixed" | "per_person"; amount: number };
 type Settings = { reviewed: boolean; currency: string; bankAlias: string; bankCbu: string; bankHolder: string; paymentHours: number; rules: Rule[] };
@@ -36,18 +37,62 @@ export function DepositsPage({ initialTab = "deposits", driveConnection }: {
 }
 
 function PaymentProofsOverview() {
+  const { bootstrap, currentUser } = useWorkspace();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [filters, setFilters] = useState(emptyDepositFilters);
+  const [selectedType, setSelectedType] = useState("all");
+  const canViewGiftCards = currentUser?.role === "restaurant_owner" && moduleEnabled(bootstrap, "giftCards");
+  const type = canViewGiftCards ? selectedType : "deposits";
+  const showGiftCards = type !== "deposits" && filters.status !== "partial";
+  const showDeposits = type !== "giftCards";
+  const giftQuery = showGiftCards ? giftCardHistoryQuery(filters) : "";
+
   return <div className="space-y-4 rounded-2xl border border-brand-line bg-[#FFFCF8] p-4">
     <div className="flex items-center justify-between gap-3">
       <h2 className="font-bold">Comprobantes</h2>
       <button type="button" className="rounded-full border border-brand-line bg-white px-3 py-2 text-xs font-bold" onClick={() => setRefreshKey(value => value + 1)}>Actualizar</button>
     </div>
-    <GiftCardProofHistory refreshKey={refreshKey} />
-    <div className="space-y-2 border-t border-brand-line pt-4">
+    <DepositFilters values={filters} onChange={setFilters} reservationOptions={type === "deposits"} allowPartial={showDeposits}>
+      {canViewGiftCards && <select aria-label="Tipo de comprobante" className="foodie-input" value={type} onChange={event => {
+        const next = event.target.value;
+        setSelectedType(next);
+        setFilters(current => ({
+          ...current, branchId: "", expired: "",
+          status: next === "giftCards" && current.status === "partial" ? "" : current.status
+        }));
+      }}>
+        <option value="all">Todos los tipos</option>
+        <option value="deposits">Señas de reservas</option>
+        <option value="giftCards">Gift Cards</option>
+      </select>}
+    </DepositFilters>
+    {(filters.from || filters.to) && <p className="text-xs text-neutral-600">
+      {showDeposits && showGiftCards ? "Las fechas se aplican al día de la reserva y al día de recepción del comprobante de Gift Card."
+        : showDeposits ? "Fecha de la reserva." : "Fecha de recepción del comprobante."}
+    </p>}
+    {showDeposits && <section className="space-y-2 border-t border-brand-line pt-4">
       <h3 className="text-sm font-bold">Señas de reservas</h3>
-      <DepositsPanel embedded refreshKey={refreshKey} />
-    </div>
+      <DepositsPanel embedded filterValues={filters} refreshKey={refreshKey} />
+    </section>}
+    {showGiftCards && <div className="border-t border-brand-line pt-4">
+      <GiftCardProofHistory key={giftQuery} query={giftQuery} refreshKey={refreshKey} />
+    </div>}
   </div>;
+}
+
+function giftCardHistoryQuery(filters: DepositFilterValues) {
+  const query = new URLSearchParams();
+  if (filters.search.trim()) query.set("search", filters.search.trim());
+  if (filters.review) query.set("review", filters.review);
+  if (filters.status === "pending") query.set("payment", "PENDING");
+  if (filters.status === "complete") query.set("payment", "CONFIRMED");
+  if (filters.from) query.set("from", new Date(`${filters.from}T00:00:00`).toISOString());
+  if (filters.to) {
+    const end = new Date(`${filters.to}T00:00:00`);
+    end.setDate(end.getDate() + 1);
+    query.set("before", end.toISOString());
+  }
+  return query.toString();
 }
 
 function DepositSettingsForm() {

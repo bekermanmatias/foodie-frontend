@@ -43,7 +43,7 @@ export function useGiftCardProofs(query: string, enabled: boolean) {
   return { proofs, loading, error, refresh };
 }
 
-export function GiftCardProofHistory({ refreshKey }: { refreshKey: number }) {
+export function GiftCardProofHistory({ refreshKey, query }: { refreshKey: number; query: string }) {
   const api = useDepositApi();
   const { bootstrap, currentUser } = useWorkspace();
   const enabled = currentUser?.role === "restaurant_owner" && moduleEnabled(bootstrap, "giftCards");
@@ -57,22 +57,25 @@ export function GiftCardProofHistory({ refreshKey }: { refreshKey: number }) {
     if (!enabled) return;
     const controller = new AbortController();
     const { signal } = controller;
-    const query = pageToken ? `?pageToken=${encodeURIComponent(pageToken)}` : "";
+    const params = new URLSearchParams(query);
+    if (pageToken) params.set("pageToken", pageToken);
     setLoading(true);
     setError("");
-    void api<typeof result>(`/restaurant/gift-cards/proofs/history${query}`, { signal })
+    void api<typeof result>(`/restaurant/gift-cards/proofs/history?${params}`, { signal })
       .then(data => { if (!signal.aborted) setResult(data); })
       .catch((reason: Error) => { if (!signal.aborted) setError(reason.message); })
       .finally(() => { if (!signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [api, enabled, pageToken, refreshKey, revision]);
+  }, [api, enabled, pageToken, query, refreshKey, revision]);
   if (!enabled) return null;
   return <section className="space-y-2">
     <h3 className="text-sm font-bold">Gift Cards</h3>
     {error ? <p role="alert" className="text-sm text-red-700">{error}</p>
       : loading ? <p role="status" className="text-sm text-neutral-600">Cargando comprobantes…</p>
       : result.items.length ? <GiftCardProofList proofs={result.items} onReviewed={() => setRevision(value => value + 1)} showSend />
-      : <p className="text-sm text-neutral-600">{pages.length || result.nextPageToken ? "No hay comprobantes de Gift Cards en esta página." : "Todavía no hay comprobantes de Gift Cards."}</p>}
+      : <p className="text-sm text-neutral-600">{result.nextPageToken ? "No hay coincidencias en esta página. Podés buscar entre los comprobantes más antiguos."
+        : query ? "No hay comprobantes de Gift Cards para estos filtros." : pages.length
+          ? "No hay comprobantes de Gift Cards en esta página." : "Todavía no hay comprobantes de Gift Cards."}</p>}
     {(pages.length > 0 || result.nextPageToken) && <div className="flex flex-wrap gap-2">
       {pages.length > 0 && <button type="button" disabled={loading} className={button} onClick={() => setPages(current => current.slice(0, -1))}>Más recientes</button>}
       {result.nextPageToken && <button type="button" disabled={loading || Boolean(error)} className={button} onClick={() => {

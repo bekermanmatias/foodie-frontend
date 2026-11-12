@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useWorkspace } from "../workspace-provider";
 import { moduleEnabled } from "../../lib/restaurant-features";
 
@@ -22,16 +22,59 @@ export function useDepositApi() {
 
 export type DepositPanelState = "loading" | "empty" | "visible";
 
-export function DepositsPanel({ phone, compact = false, embedded = false, refreshKey = 0, onPanelState }: {
-  phone?: string; compact?: boolean; embedded?: boolean; refreshKey?: number; onPanelState?: (state: DepositPanelState) => void;
+export const emptyDepositFilters = { search: "", branchId: "", status: "", review: "", from: "", to: "", expired: "" };
+export type DepositFilterValues = typeof emptyDepositFilters;
+
+export function DepositFilters({ values, onChange, reservationOptions, allowPartial = true, children }: {
+  values: DepositFilterValues;
+  onChange: (values: DepositFilterValues) => void;
+  reservationOptions: boolean;
+  allowPartial?: boolean;
+  children?: ReactNode;
+}) {
+  const { bootstrap } = useWorkspace();
+  const change = (key: keyof DepositFilterValues, value: string) => onChange({ ...values, [key]: value });
+  return <div className="grid items-end gap-2 sm:grid-cols-3">
+    {children}
+    <input aria-label="Buscar por nombre, código o teléfono" placeholder="Nombre, código o teléfono" maxLength={120}
+      value={values.search} onChange={event => change("search", event.target.value)} className="foodie-input" />
+    <select aria-label="Estado de pago" className="foodie-input" value={values.status} onChange={event => change("status", event.target.value)}>
+      <option value="">Todos los pagos</option>
+      <option value="pending">Pendientes de pago</option>
+      {allowPartial && <option value="partial">Pago parcial</option>}
+      <option value="complete">Pagos completos</option>
+    </select>
+    <select aria-label="Estado del comprobante" className="foodie-input" value={values.review} onChange={event => change("review", event.target.value)}>
+      <option value="">Todos los comprobantes</option>
+      <option value="pending">Por revisar</option>
+      <option value="approved">Aprobados</option>
+      <option value="rejected">Rechazados</option>
+    </select>
+    <label>Desde<input type="date" className="foodie-input" value={values.from} onChange={event => change("from", event.target.value)} /></label>
+    <label>Hasta<input type="date" className="foodie-input" value={values.to} onChange={event => change("to", event.target.value)} /></label>
+    {reservationOptions && <>
+      <select aria-label="Sucursal" className="foodie-input" value={values.branchId} onChange={event => change("branchId", event.target.value)}>
+        <option value="">Todas las sucursales</option>
+        {bootstrap?.branches.map(branch => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+      </select>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={values.expired === "true"}
+        onChange={event => change("expired", event.target.checked ? "true" : "")} /> Solo vencidas sin cubrir</label>
+    </>}
+  </div>;
+}
+
+export function DepositsPanel({ phone, compact = false, embedded = false, filterValues, refreshKey = 0, onPanelState }: {
+  phone?: string; compact?: boolean; embedded?: boolean; filterValues?: DepositFilterValues; refreshKey?: number;
+  onPanelState?: (state: DepositPanelState) => void;
 }) {
   const { bootstrap, currentUser, token } = useWorkspace();
   const enabled = (!compact || Boolean(phone)) && moduleEnabled(bootstrap, "deposits") && Boolean(currentUser && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role));
   const api = useDepositApi();
   const [rows, setRows] = useState<Deposit[]>([]); const [reservations, setReservations] = useState<Reservation[]>([]);
   const [error, setError] = useState(""); const [loading, setLoading] = useState(compact);
-  const [filters, setFilters] = useState({ branchId: "", status: "", review: "", from: "", to: "", expired: "" });
-  const [search, setSearch] = useState(""); const [open, setOpen] = useState(true);
+  const [localFilters, setLocalFilters] = useState(emptyDepositFilters);
+  const filters = filterValues ?? localFilters;
+  const [open, setOpen] = useState(true);
   const [action, setAction] = useState<{ type: string; row?: Deposit; proof?: Proof; reservation?: Reservation; key: string } | null>(null);
   const [amount, setAmount] = useState(""); const [reference, setReference] = useState(""); const [notes, setNotes] = useState(""); const [date, setDate] = useState("");
   const [busy, setBusy] = useState(false); const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
@@ -40,14 +83,18 @@ export function DepositsPanel({ phone, compact = false, embedded = false, refres
     controllerRef.current?.abort(); const controller = new AbortController(); controllerRef.current = controller;
     if (!enabled || !open) return;
     setLoading(true); setError("");
-    const query = new URLSearchParams(); Object.entries(filters).forEach(([key, value]) => { if (value) query.set(key, value); });
+    const { search, ...criteria } = filters;
+    const query = new URLSearchParams();
+    Object.entries(criteria).forEach(([key, value]) => { if (value) query.set(key, value); });
+    if (search.trim()) query.set("search", search.trim());
+    const offerNewDeposit = search.trim().length >= 2 && !Object.values(criteria).some(Boolean);
     if (phone) query.set("phone", phone);
     try {
-      const [data, contacts] = await Promise.all([api<Deposit[]>(`/restaurant/deposits?${query}`, { signal: controller.signal }), phone ? api<Reservation[]>(`/restaurant/deposits/contact-reservations?phone=${encodeURIComponent(phone)}`, { signal: controller.signal }) : search.trim().length >= 2 ? api<Reservation[]>(`/restaurant/deposits/reservation-options?search=${encodeURIComponent(search)}`, { signal: controller.signal }) : Promise.resolve([])]);
+      const [data, contacts] = await Promise.all([api<Deposit[]>(`/restaurant/deposits?${query}`, { signal: controller.signal }), phone ? api<Reservation[]>(`/restaurant/deposits/contact-reservations?phone=${encodeURIComponent(phone)}`, { signal: controller.signal }) : offerNewDeposit ? api<Reservation[]>(`/restaurant/deposits/reservation-options?search=${encodeURIComponent(search.trim())}`, { signal: controller.signal }) : Promise.resolve([])]);
       if (!controller.signal.aborted) { setRows(data); setReservations(contacts); }
     } catch (reason) { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Error de conexión"); }
     finally { if (!controller.signal.aborted) setLoading(false); }
-  }, [api, enabled, open, phone, filters, search]);
+  }, [api, enabled, open, phone, filters]);
   useEffect(() => { setRows([]); setReservations([]); void refresh(); window.addEventListener("focus", refresh); return () => { controllerRef.current?.abort(); window.removeEventListener("focus", refresh); }; }, [refresh, refreshKey]);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview.url); }, [preview]);
   const hasContent = Boolean(rows.length || reservations.some(reservation => !reservation.deposit) || error || action || preview);
@@ -87,15 +134,15 @@ export function DepositsPanel({ phone, compact = false, embedded = false, refres
     catch (reason) { setError(reason instanceof Error ? reason.message : "Error de conexión"); }
   }
   const button = "rounded-full border border-brand-line bg-white px-3 py-2 text-xs font-bold text-brand-ink disabled:opacity-50";
-  const visible = rows.filter((row) => `${row.reservation.fullName} ${row.reservation.code} ${row.reservation.phone}`.toLowerCase().includes(search.toLowerCase()));
+  const availableReservations = reservations.filter(reservation => !reservation.deposit);
   return <section className={compact || embedded ? undefined : "rounded-2xl border border-brand-line bg-[#FFFCF8] p-4"}>
     {!compact && !embedded && <div className="flex items-center justify-between gap-2"><button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="font-bold">Señas y comprobantes {open ? "▾" : "▸"}</button>{open && <button className={button} onClick={() => void refresh()}>Actualizar</button>}</div>}
     {open && <div className={compact ? "space-y-2" : embedded ? "space-y-3" : "mt-3 space-y-3"}>
-      {!compact && <div className="grid gap-2 sm:grid-cols-3"><input aria-label="Buscar reserva" placeholder="Nombre, código o teléfono" value={search} onChange={(e) => setSearch(e.target.value)} className="foodie-input" /><select aria-label="Sucursal" className="foodie-input" value={filters.branchId} onChange={(e) => setFilters({ ...filters, branchId: e.target.value })}><option value="">Todas las sucursales</option>{bootstrap?.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select><select aria-label="Estado de seña" className="foodie-input" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">Todos los pagos</option><option value="pending">Sin acreditar</option><option value="partial">Pago parcial</option><option value="complete">Seña cubierta</option></select><select aria-label="Revisión" className="foodie-input" value={filters.review} onChange={(e) => setFilters({ ...filters, review: e.target.value })}><option value="">Todos los comprobantes</option><option value="pending">Por revisar</option><option value="approved">Aprobados</option><option value="rejected">Rechazados</option></select><label>Desde<input type="date" className="foodie-input" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} /></label><label>Hasta<input type="date" className="foodie-input" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} /></label><label className="text-sm"><input type="checkbox" checked={filters.expired === "true"} onChange={(e) => setFilters({ ...filters, expired: e.target.checked ? "true" : "" })} /> Solo vencidas sin cubrir</label></div>}
+      {!compact && !filterValues && <DepositFilters values={filters} onChange={setLocalFilters} reservationOptions />}
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}{loading && !compact && <p role="status" className="text-sm">Actualizando señas…</p>}
-      {reservations.filter((reservation) => !reservation.deposit).map((reservation) => <div key={reservation.id} className="rounded-xl border p-3 text-sm">Reserva {reservation.code} · {new Date(reservation.serviceDate).toLocaleDateString("es-AR", { timeZone: "UTC" })}<button className={`${button} ml-2`} onClick={() => select("request", undefined, undefined, reservation)}>Solicitar seña</button></div>)}
-      {!compact && !loading && !visible.length && <p className="text-sm text-neutral-600">No hay señas para esta selección.</p>}
-      {visible.map((row) => <article key={row.id} className="space-y-3 rounded-xl border bg-white p-3 text-sm">
+      {availableReservations.map((reservation) => <div key={reservation.id} className="rounded-xl border p-3 text-sm">Reserva {reservation.code} · {new Date(reservation.serviceDate).toLocaleDateString("es-AR", { timeZone: "UTC" })}<button className={`${button} ml-2`} onClick={() => select("request", undefined, undefined, reservation)}>Solicitar seña</button></div>)}
+      {!compact && !loading && !rows.length && !availableReservations.length && !error && <p className="text-sm text-neutral-600">No hay señas para esta selección.</p>}
+      {rows.map((row) => <article key={row.id} className="space-y-3 rounded-xl border bg-white p-3 text-sm">
         <div><strong>{row.reservation.fullName} · {row.reservation.code}</strong><p>{new Date(row.reservation.serviceDate).toLocaleDateString("es-AR", { timeZone: "UTC" })} · {row.reservation.serviceTime}</p><p>Seña: {money(row.requiredAmount)} · Acreditado: {money(row.paidAmount)} · Saldo: {money(Math.max(0, Number(row.requiredAmount) - Number(row.paidAmount)))}</p><p>Reserva: {row.reservation.status === "pending" ? "Pendiente de confirmación manual" : row.reservation.status === "confirmed" ? "Confirmada" : row.reservation.status}</p>{row.dueAt && <p className={new Date(row.dueAt) < new Date() && row.status !== "complete" ? "font-bold text-orange-700" : ""}>Plazo: {new Date(row.dueAt).toLocaleString("es-AR")}{new Date(row.dueAt) < new Date() && row.status !== "complete" ? " · Vencida: requiere revisión, conserva su cupo" : ""}</p>}</div>
         <div className="flex flex-wrap gap-2"><button className={button} disabled={busy} onClick={() => select("payment", row)}>Registrar pago</button><button className={button} disabled={busy} onClick={() => select("proof-requests", row)}>Solicitar otro comprobante</button>{Number(row.paidAmount) > 0 && <button className={button} onClick={() => select("refund", row)}>Registrar devolución</button>}{row.status === "complete" && row.reservation.status === "pending" && <button className={`${button} bg-orange-100`} onClick={() => select("confirm-reservation", row)}>Confirmar reserva</button>}{row.confirmationAt && row.reservation.status === "confirmed" && <button className={button} onClick={() => select("send-confirmation", row)}>Enviar confirmación{bootstrap?.isDemo ? " (simulada)" : ""}</button>}<label className={`${button} cursor-pointer`}>Cargar comprobante<input type="file" className="sr-only" disabled={busy} accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(e) => { void file(row, e.target.files?.[0]); e.target.value = ""; }} /></label></div>
         {row.proofRequests.flatMap((request) => request.proofs).map((proof) => <div key={proof.id} className="space-y-2 rounded-xl bg-orange-50 p-3"><p><strong>{proof.originalName}</strong> · {new Date(proof.receivedAt).toLocaleString("es-AR")}</p><p>{proof.reviewStatus === "pending" ? "Pendiente de aprobación" : proof.reviewStatus === "approved" ? "Aprobado" : `Rechazado: ${proof.rejectionReason}`}</p><div className="flex flex-wrap gap-2"><button className={button} onClick={() => void view(proof)}>Ver comprobante</button>{proof.reviewStatus === "pending" && <><button className={button} onClick={() => select("payment", row, proof)}>Acreditar pago</button><button className={button} onClick={() => select("reject", row, proof)}>Rechazar con motivo</button></>}{proof.driveFileUrl && <a className={button} href={proof.driveFileUrl} target="_blank" rel="noreferrer">Abrir en Drive</a>}{proof.driveStatus !== "synced" && <button className={button} onClick={() => { setBusy(true); void run(`/restaurant/deposits/proofs/${proof.id}/sync-drive`).catch((reason: Error) => setError(reason.message)).finally(() => setBusy(false)); }} disabled={busy}>{proof.driveStatus === "simulated" ? "Drive simulado" : "Sincronizar con Drive"}</button>}</div>{proof.driveError && <p className="text-xs text-orange-800">{proof.driveError}. El comprobante sigue disponible para revisión.</p>}</div>)}
