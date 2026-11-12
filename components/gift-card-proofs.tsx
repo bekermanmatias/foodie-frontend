@@ -8,7 +8,7 @@ import { moduleEnabled } from "../lib/restaurant-features";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 const button = "rounded-full border border-brand-line px-3 py-1.5 text-sm font-semibold disabled:opacity-50";
-type GiftCardDeliveryState = { ready: boolean; channelConfigured: boolean; sent: number; total: number };
+type GiftCardDeliveryState = { ready: boolean; channelConfigured: boolean; routeConfigured?: boolean; sent: number; total: number };
 type GiftCardProof = {
   id: string; name: string; mimeType: string; createdTime: string;
   order: { id: string; purchaserName: string; amount: string | number; currency: string; status: string; paymentStatus: string; product?: { name: string } | null; delivery?: GiftCardDeliveryState };
@@ -119,9 +119,10 @@ function GiftCardDelivery({ orderId, delivery }: { orderId: string; delivery: Gi
   const [sent, setSent] = useState(0);
   const [error, setError] = useState("");
   const sentCount = Math.max(sent, delivery.sent);
+  const canSend = delivery.channelConfigured && delivery.routeConfigured !== false;
 
   async function send() {
-    if (inFlight.current || !delivery.channelConfigured || sentCount >= delivery.total) return;
+    if (inFlight.current || !canSend || sentCount >= delivery.total) return;
     inFlight.current = true;
     setSending(true);
     setError("");
@@ -144,10 +145,11 @@ function GiftCardDelivery({ orderId, delivery }: { orderId: string; delivery: Gi
   if (!delivery.ready) return null;
   if (sentCount >= delivery.total) return <span role="status" className="text-sm font-semibold text-emerald-700">Enviada por WhatsApp</span>;
   return <div className="space-y-1">
-    <button type="button" className={`${button} bg-brand-orange text-white`} disabled={sending || !delivery.channelConfigured} onClick={() => void send()}>
+    <button type="button" className={`${button} bg-brand-orange text-white`} disabled={sending || !canSend} onClick={() => void send()}>
       {sending ? "Enviando…" : sentCount > 0 ? "Enviar Gift Cards pendientes" : "Enviar Gift Card"}
     </button>
     {!delivery.channelConfigured && <p className="text-xs text-neutral-600">Configurá el canal de WhatsApp para enviar.</p>}
+    {delivery.channelConfigured && !canSend && <p className="text-xs text-neutral-600">Falta configurar el envío para este canal de WhatsApp.</p>}
     {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
   </div>;
 }
