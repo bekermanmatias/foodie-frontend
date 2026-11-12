@@ -68,6 +68,7 @@ function DepositDrivePanel() {
   const [busy, setBusy] = useState(false);
   const [showFolderLink, setShowFolderLink] = useState(false);
   const [folderLink, setFolderLink] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
   const [revision, setRevision] = useState(0);
   const [files, setFiles] = useState<FileRow[]>([]);
   const [category, setCategory] = useState("proofs");
@@ -142,6 +143,11 @@ function DepositDrivePanel() {
 
   const connected = state?.status === "connected";
   const foldersReady = Boolean(state?.rootFolderId && state.proofsFolderId && state.generalFolderId);
+  const folderIds = [
+    { label: "Carpeta raíz", id: state?.rootFolderId },
+    { label: "Comprobantes", id: state?.proofsFolderId },
+    { label: "Archivos generales", id: state?.generalFolderId }
+  ];
   const visibleFiles = files.filter((file) =>
     [file.name, file.originalName, file.request?.deposit.reservation.code, file.request?.deposit.reservation.fullName]
       .some((value) => value?.toLowerCase().includes(search.trim().toLowerCase()))
@@ -197,6 +203,31 @@ function DepositDrivePanel() {
             <button type="submit" disabled={busy} className={primary}>Guardar carpeta</button>
           </div>
         </form>
+      )}
+      {owner && connected && foldersReady && !state?.demo && (
+        <div className="space-y-2 rounded-xl border border-brand-line p-3">
+          <h3 className="text-sm font-semibold">IDs de carpetas</h3>
+          <dl className="divide-y divide-brand-line">
+            {folderIds.map(({ label, id }) => id && (
+              <div key={label} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <div className="min-w-0">
+                  <dt className="text-sm font-semibold">{label}</dt>
+                  <dd className="break-all font-mono text-xs text-neutral-600">{id}</dd>
+                </div>
+                <button type="button" className={secondary} aria-label={`Copiar ID de ${label}`} onClick={async () => {
+                  setCopyMessage("");
+                  try {
+                    await navigator.clipboard.writeText(id);
+                    setCopyMessage(`ID de ${label} copiado.`);
+                  } catch {
+                    setCopyMessage("Seleccioná el ID para copiarlo manualmente.");
+                  }
+                }}>Copiar ID</button>
+              </div>
+            ))}
+          </dl>
+          <p role="status" className="text-sm">{copyMessage}</p>
+        </div>
       )}
       {error && <p role="alert" className="text-red-700">{error}</p>}
       <div className="flex flex-wrap gap-2">
