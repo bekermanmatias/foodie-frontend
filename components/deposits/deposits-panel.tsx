@@ -20,15 +20,18 @@ export function useDepositApi() {
   }, [token]);
 }
 
-export function DepositsPanel({ phone, compact = false, expanded }: { phone?: string; compact?: boolean; expanded?: boolean }) {
+export type DepositPanelState = "loading" | "empty" | "visible";
+
+export function DepositsPanel({ phone, compact = false, refreshKey = 0, onPanelState }: {
+  phone?: string; compact?: boolean; refreshKey?: number; onPanelState?: (state: DepositPanelState) => void;
+}) {
   const { bootstrap, currentUser, token } = useWorkspace();
   const enabled = (!compact || Boolean(phone)) && moduleEnabled(bootstrap, "deposits") && Boolean(currentUser && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role));
   const api = useDepositApi();
   const [rows, setRows] = useState<Deposit[]>([]); const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(""); const [loading, setLoading] = useState(compact);
   const [filters, setFilters] = useState({ branchId: "", status: "", review: "", from: "", to: "", expired: "" });
-  const [search, setSearch] = useState(""); const [internalOpen, setOpen] = useState(!compact);
-  const open = expanded ?? internalOpen;
+  const [search, setSearch] = useState(""); const [open, setOpen] = useState(true);
   const [action, setAction] = useState<{ type: string; row?: Deposit; proof?: Proof; reservation?: Reservation; key: string } | null>(null);
   const [amount, setAmount] = useState(""); const [reference, setReference] = useState(""); const [notes, setNotes] = useState(""); const [date, setDate] = useState("");
   const [busy, setBusy] = useState(false); const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
@@ -45,9 +48,14 @@ export function DepositsPanel({ phone, compact = false, expanded }: { phone?: st
     } catch (reason) { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Error de conexión"); }
     finally { if (!controller.signal.aborted) setLoading(false); }
   }, [api, enabled, open, phone, filters, search]);
-  useEffect(() => { setRows([]); setReservations([]); void refresh(); window.addEventListener("focus", refresh); return () => { controllerRef.current?.abort(); window.removeEventListener("focus", refresh); }; }, [refresh]);
+  useEffect(() => { setRows([]); setReservations([]); void refresh(); window.addEventListener("focus", refresh); return () => { controllerRef.current?.abort(); window.removeEventListener("focus", refresh); }; }, [refresh, refreshKey]);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview.url); }, [preview]);
+  const hasContent = Boolean(rows.length || reservations.some(reservation => !reservation.deposit) || error || action || preview);
+  useEffect(() => {
+    onPanelState?.(!enabled ? "empty" : hasContent ? "visible" : loading ? "loading" : "empty");
+  }, [enabled, hasContent, loading, onPanelState]);
   if (!enabled) return null;
+  if (compact && !hasContent) return null;
   function select(type: string, row?: Deposit, proof?: Proof, reservation?: Reservation) {
     setAction({ type, row, proof, reservation, key: crypto.randomUUID() }); setAmount(row ? String(Math.max(0, Number(row.requiredAmount) - Number(row.paidAmount))) : ""); setReference(""); setNotes(""); setDate(new Date().toISOString().slice(0, 16)); setError("");
   }
@@ -80,13 +88,13 @@ export function DepositsPanel({ phone, compact = false, expanded }: { phone?: st
   }
   const button = "rounded-full border border-brand-line bg-white px-3 py-2 text-xs font-bold text-brand-ink disabled:opacity-50";
   const visible = rows.filter((row) => `${row.reservation.fullName} ${row.reservation.code} ${row.reservation.phone}`.toLowerCase().includes(search.toLowerCase()));
-  return <section className={`rounded-2xl border border-brand-line bg-[#FFFCF8] ${compact ? "max-h-[45vh] shrink-0 overflow-auto p-3" : "p-4"}`}>
-    <div className="flex items-center justify-between gap-2">{expanded !== undefined ? <span className="text-sm font-bold">Comprobantes</span> : <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="font-bold">Señas y comprobantes {open ? "▾" : "▸"}</button>}{open && <button className={button} onClick={() => void refresh()}>Actualizar</button>}</div>
-    {open && <div className="mt-3 space-y-3">
+  return <section className={compact ? undefined : "rounded-2xl border border-brand-line bg-[#FFFCF8] p-4"}>
+    {!compact && <div className="flex items-center justify-between gap-2"><button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="font-bold">Señas y comprobantes {open ? "▾" : "▸"}</button>{open && <button className={button} onClick={() => void refresh()}>Actualizar</button>}</div>}
+    {open && <div className={compact ? "space-y-2" : "mt-3 space-y-3"}>
       {!compact && <div className="grid gap-2 sm:grid-cols-3"><input aria-label="Buscar reserva" placeholder="Nombre, código o teléfono" value={search} onChange={(e) => setSearch(e.target.value)} className="foodie-input" /><select aria-label="Sucursal" className="foodie-input" value={filters.branchId} onChange={(e) => setFilters({ ...filters, branchId: e.target.value })}><option value="">Todas las sucursales</option>{bootstrap?.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select><select aria-label="Estado de seña" className="foodie-input" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">Todos los pagos</option><option value="pending">Sin acreditar</option><option value="partial">Pago parcial</option><option value="complete">Seña cubierta</option></select><select aria-label="Revisión" className="foodie-input" value={filters.review} onChange={(e) => setFilters({ ...filters, review: e.target.value })}><option value="">Todos los comprobantes</option><option value="pending">Por revisar</option><option value="approved">Aprobados</option><option value="rejected">Rechazados</option></select><label>Desde<input type="date" className="foodie-input" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} /></label><label>Hasta<input type="date" className="foodie-input" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} /></label><label className="text-sm"><input type="checkbox" checked={filters.expired === "true"} onChange={(e) => setFilters({ ...filters, expired: e.target.checked ? "true" : "" })} /> Solo vencidas sin cubrir</label></div>}
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}{loading && <p role="status" className="text-sm">Actualizando señas…</p>}
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}{loading && !compact && <p role="status" className="text-sm">Actualizando señas…</p>}
       {reservations.filter((reservation) => !reservation.deposit).map((reservation) => <div key={reservation.id} className="rounded-xl border p-3 text-sm">Reserva {reservation.code} · {new Date(reservation.serviceDate).toLocaleDateString("es-AR", { timeZone: "UTC" })}<button className={`${button} ml-2`} onClick={() => select("request", undefined, undefined, reservation)}>Solicitar seña</button></div>)}
-      {!loading && !visible.length && <p className="text-sm text-neutral-600">No hay señas para esta selección.</p>}
+      {!compact && !loading && !visible.length && <p className="text-sm text-neutral-600">No hay señas para esta selección.</p>}
       {visible.map((row) => <article key={row.id} className="space-y-3 rounded-xl border bg-white p-3 text-sm">
         <div><strong>{row.reservation.fullName} · {row.reservation.code}</strong><p>{new Date(row.reservation.serviceDate).toLocaleDateString("es-AR", { timeZone: "UTC" })} · {row.reservation.serviceTime}</p><p>Seña: {money(row.requiredAmount)} · Acreditado: {money(row.paidAmount)} · Saldo: {money(Math.max(0, Number(row.requiredAmount) - Number(row.paidAmount)))}</p><p>Reserva: {row.reservation.status === "pending" ? "Pendiente de confirmación manual" : row.reservation.status === "confirmed" ? "Confirmada" : row.reservation.status}</p>{row.dueAt && <p className={new Date(row.dueAt) < new Date() && row.status !== "complete" ? "font-bold text-orange-700" : ""}>Plazo: {new Date(row.dueAt).toLocaleString("es-AR")}{new Date(row.dueAt) < new Date() && row.status !== "complete" ? " · Vencida: requiere revisión, conserva su cupo" : ""}</p>}</div>
         <div className="flex flex-wrap gap-2"><button className={button} disabled={busy} onClick={() => select("payment", row)}>Registrar pago</button><button className={button} disabled={busy} onClick={() => select("proof-requests", row)}>Solicitar otro comprobante</button>{Number(row.paidAmount) > 0 && <button className={button} onClick={() => select("refund", row)}>Registrar devolución</button>}{row.status === "complete" && row.reservation.status === "pending" && <button className={`${button} bg-orange-100`} onClick={() => select("confirm-reservation", row)}>Confirmar reserva</button>}{row.confirmationAt && row.reservation.status === "confirmed" && <button className={button} onClick={() => select("send-confirmation", row)}>Enviar confirmación{bootstrap?.isDemo ? " (simulada)" : ""}</button>}<label className={`${button} cursor-pointer`}>Cargar comprobante<input type="file" className="sr-only" disabled={busy} accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(e) => { void file(row, e.target.files?.[0]); e.target.value = ""; }} /></label></div>

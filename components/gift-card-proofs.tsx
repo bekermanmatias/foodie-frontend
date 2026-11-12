@@ -59,14 +59,14 @@ export function GiftCardProofsPanel({ phone }: { phone?: string }) {
   </section>;
 }
 
-export function GiftCardProofList({ proofs, onReviewed }: { proofs: GiftCardProof[]; onReviewed: () => void }) {
+export function GiftCardProofList({ proofs, onReviewed, showType = false }: { proofs: GiftCardProof[]; onReviewed: () => void; showType?: boolean }) {
   const [selected, setSelected] = useState<GiftCardProof | null>(null);
   const [notice, setNotice] = useState("");
   return <>
     <ul className="space-y-2">
       {proofs.map(proof => <li key={proof.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#FFF6EF] px-3 py-2 text-sm">
         <div>
-          <p className="font-bold">{proof.order.product?.name || "Gift Card"} · {proof.order.purchaserName}</p>
+          <p className="font-bold">{showType && proof.order.product?.name ? "Gift Card · " : ""}{proof.order.product?.name || "Gift Card"} · {proof.order.purchaserName}</p>
           <p className="text-neutral-600">{formatAmount(proof.order)} · {paymentLabel(proof.order)} · {new Date(proof.createdTime).toLocaleString("es-AR")}</p>
         </div>
         <button type="button" className={`${button} bg-white`} onClick={() => { setNotice(""); setSelected(proof); }}>
@@ -74,7 +74,7 @@ export function GiftCardProofList({ proofs, onReviewed }: { proofs: GiftCardProo
         </button>
       </li>)}
     </ul>
-    <p role="status" className="text-sm text-emerald-700">{notice}</p>
+    {notice && <p role="status" className="text-sm text-emerald-700">{notice}</p>}
     {selected && <GiftCardProofDialog proof={selected} onClose={() => setSelected(null)} onReviewed={approved => {
       setSelected(null);
       setNotice(approved ? "Pago aprobado. La Gift Card está disponible para enviar." : "Pago rechazado y orden cancelada.");

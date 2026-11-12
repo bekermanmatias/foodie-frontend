@@ -1,7 +1,6 @@
 "use client";
 
-import { DepositsPanel } from "../deposits/deposits-panel";
-import { GiftCardProofsPanel } from "../gift-card-proofs";
+import { ChatProofsPanel } from "./chat-proofs-panel";
 import { useWorkspace } from "../workspace-provider";
 import { moduleEnabled } from "../../lib/restaurant-features";
 import { format, isToday, isYesterday } from "date-fns";
@@ -662,10 +661,7 @@ export function ChatDashboard() {
               </header>
 
               {canViewProofs && activeChat.phoneNumber && proofsChatId === activeChat.chatId ? (
-                <div id="chat-proofs-panel" className="min-h-0 max-h-[45vh] shrink-0 overflow-auto">
-                  {canViewGiftProofs && <GiftCardProofsPanel key={`gift-${activeChat.chatId}`} phone={activeChat.phoneNumber} />}
-                  {canViewDepositProofs && <DepositsPanel key={`deposits-${activeChat.chatId}`} phone={activeChat.phoneNumber} compact expanded />}
-                </div>
+                <ChatProofsPanel key={activeChat.chatId} phone={activeChat.phoneNumber} showDeposits={canViewDepositProofs} showGiftCards={canViewGiftProofs} />
               ) : null}
               <div ref={messagesContainerRef} className="chat-messages flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FFFCFA_0%,#F7F1E9_100%)] px-4 py-5 md:px-6 xl:px-4 xl:py-4">
                 {Object.keys(messageGroups)
