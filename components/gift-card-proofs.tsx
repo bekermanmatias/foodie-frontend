@@ -42,21 +42,43 @@ export function useGiftCardProofs(query: string, enabled: boolean) {
   return { proofs, loading, error, refresh };
 }
 
-export function GiftCardProofsPanel({ phone }: { phone?: string }) {
+export function GiftCardProofHistory({ refreshKey }: { refreshKey: number }) {
+  const api = useDepositApi();
   const { bootstrap, currentUser } = useWorkspace();
   const enabled = currentUser?.role === "restaurant_owner" && moduleEnabled(bootstrap, "giftCards");
-  const query = phone ? `?phone=${encodeURIComponent(phone)}` : "";
-  const { proofs, loading, error, refresh } = useGiftCardProofs(query, enabled);
+  const [pages, setPages] = useState<string[]>([]);
+  const [result, setResult] = useState<{ items: GiftCardProof[]; nextPageToken: string | null }>({ items: [], nextPageToken: null });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [revision, setRevision] = useState(0);
+  const pageToken = pages.at(-1);
+  useEffect(() => {
+    if (!enabled) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const query = pageToken ? `?pageToken=${encodeURIComponent(pageToken)}` : "";
+    setLoading(true);
+    setError("");
+    void api<typeof result>(`/restaurant/gift-cards/proofs/history${query}`, { signal })
+      .then(data => { if (!signal.aborted) setResult(data); })
+      .catch((reason: Error) => { if (!signal.aborted) setError(reason.message); })
+      .finally(() => { if (!signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [api, enabled, pageToken, refreshKey, revision]);
   if (!enabled) return null;
-  return <section className="space-y-2 rounded-2xl border border-brand-line bg-white p-3">
-    <div className="flex items-center justify-between gap-2">
-      <h2 className="text-sm font-bold">Comprobantes de Gift Cards</h2>
-      <button type="button" className={button} disabled={loading} onClick={refresh}>Actualizar</button>
-    </div>
+  return <section className="space-y-2">
+    <h3 className="text-sm font-bold">Gift Cards</h3>
     {error ? <p role="alert" className="text-sm text-red-700">{error}</p>
       : loading ? <p role="status" className="text-sm text-neutral-600">Cargando comprobantes…</p>
-      : proofs.length ? <GiftCardProofList proofs={proofs} onReviewed={refresh} />
-      : <p className="text-sm text-neutral-600">{phone ? "Este contacto todavía no tiene comprobantes de Gift Cards." : "No hay comprobantes de Gift Cards pendientes."}</p>}
+      : result.items.length ? <GiftCardProofList proofs={result.items} onReviewed={() => setRevision(value => value + 1)} />
+      : <p className="text-sm text-neutral-600">{pages.length || result.nextPageToken ? "No hay comprobantes de Gift Cards en esta página." : "Todavía no hay comprobantes de Gift Cards."}</p>}
+    {(pages.length > 0 || result.nextPageToken) && <div className="flex flex-wrap gap-2">
+      {pages.length > 0 && <button type="button" disabled={loading} className={button} onClick={() => setPages(current => current.slice(0, -1))}>Más recientes</button>}
+      {result.nextPageToken && <button type="button" disabled={loading || Boolean(error)} className={button} onClick={() => {
+        const next = result.nextPageToken;
+        if (next) setPages(current => [...current, next]);
+      }}>Más antiguos</button>}
+    </div>}
   </section>;
 }
 

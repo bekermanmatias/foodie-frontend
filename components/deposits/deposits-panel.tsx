@@ -22,8 +22,8 @@ export function useDepositApi() {
 
 export type DepositPanelState = "loading" | "empty" | "visible";
 
-export function DepositsPanel({ phone, compact = false, refreshKey = 0, onPanelState }: {
-  phone?: string; compact?: boolean; refreshKey?: number; onPanelState?: (state: DepositPanelState) => void;
+export function DepositsPanel({ phone, compact = false, embedded = false, refreshKey = 0, onPanelState }: {
+  phone?: string; compact?: boolean; embedded?: boolean; refreshKey?: number; onPanelState?: (state: DepositPanelState) => void;
 }) {
   const { bootstrap, currentUser, token } = useWorkspace();
   const enabled = (!compact || Boolean(phone)) && moduleEnabled(bootstrap, "deposits") && Boolean(currentUser && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role));
@@ -88,9 +88,9 @@ export function DepositsPanel({ phone, compact = false, refreshKey = 0, onPanelS
   }
   const button = "rounded-full border border-brand-line bg-white px-3 py-2 text-xs font-bold text-brand-ink disabled:opacity-50";
   const visible = rows.filter((row) => `${row.reservation.fullName} ${row.reservation.code} ${row.reservation.phone}`.toLowerCase().includes(search.toLowerCase()));
-  return <section className={compact ? undefined : "rounded-2xl border border-brand-line bg-[#FFFCF8] p-4"}>
-    {!compact && <div className="flex items-center justify-between gap-2"><button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="font-bold">Señas y comprobantes {open ? "▾" : "▸"}</button>{open && <button className={button} onClick={() => void refresh()}>Actualizar</button>}</div>}
-    {open && <div className={compact ? "space-y-2" : "mt-3 space-y-3"}>
+  return <section className={compact || embedded ? undefined : "rounded-2xl border border-brand-line bg-[#FFFCF8] p-4"}>
+    {!compact && !embedded && <div className="flex items-center justify-between gap-2"><button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="font-bold">Señas y comprobantes {open ? "▾" : "▸"}</button>{open && <button className={button} onClick={() => void refresh()}>Actualizar</button>}</div>}
+    {open && <div className={compact ? "space-y-2" : embedded ? "space-y-3" : "mt-3 space-y-3"}>
       {!compact && <div className="grid gap-2 sm:grid-cols-3"><input aria-label="Buscar reserva" placeholder="Nombre, código o teléfono" value={search} onChange={(e) => setSearch(e.target.value)} className="foodie-input" /><select aria-label="Sucursal" className="foodie-input" value={filters.branchId} onChange={(e) => setFilters({ ...filters, branchId: e.target.value })}><option value="">Todas las sucursales</option>{bootstrap?.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select><select aria-label="Estado de seña" className="foodie-input" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">Todos los pagos</option><option value="pending">Sin acreditar</option><option value="partial">Pago parcial</option><option value="complete">Seña cubierta</option></select><select aria-label="Revisión" className="foodie-input" value={filters.review} onChange={(e) => setFilters({ ...filters, review: e.target.value })}><option value="">Todos los comprobantes</option><option value="pending">Por revisar</option><option value="approved">Aprobados</option><option value="rejected">Rechazados</option></select><label>Desde<input type="date" className="foodie-input" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} /></label><label>Hasta<input type="date" className="foodie-input" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} /></label><label className="text-sm"><input type="checkbox" checked={filters.expired === "true"} onChange={(e) => setFilters({ ...filters, expired: e.target.checked ? "true" : "" })} /> Solo vencidas sin cubrir</label></div>}
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}{loading && !compact && <p role="status" className="text-sm">Actualizando señas…</p>}
       {reservations.filter((reservation) => !reservation.deposit).map((reservation) => <div key={reservation.id} className="rounded-xl border p-3 text-sm">Reserva {reservation.code} · {new Date(reservation.serviceDate).toLocaleDateString("es-AR", { timeZone: "UTC" })}<button className={`${button} ml-2`} onClick={() => select("request", undefined, undefined, reservation)}>Solicitar seña</button></div>)}
