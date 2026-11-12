@@ -19,7 +19,7 @@ export function DocumentsPage() {
   return <WorkspaceShell title="Documentos" description="Consultá los archivos generales y comprobantes de este restaurante.">
     {!allowed ? <p>Solo el dueño y el gerente pueden consultar documentos.</p>
       : !moduleEnabled(bootstrap, "deposits") ? <p>Habilitá Señas y pagos para consultar los archivos del restaurante.</p>
-      : <DepositDrivePanel initialCategory="general" manageConnection={false} />}
+      : <DepositDrivePanel manageConnection={false} />}
   </WorkspaceShell>;
 }
 
@@ -131,12 +131,9 @@ function driveFolderId(input: string) {
   }
 }
 
-function DepositDrivePanel({ initialCategory = "proofs", manageConnection = true }: {
-  initialCategory?: "proofs" | "general";
-  manageConnection?: boolean;
-}) {
+function DepositDrivePanel({ manageConnection = true }: { manageConnection?: boolean }) {
   const api = useDepositApi();
-  const { currentUser } = useWorkspace();
+  const { bootstrap, currentUser } = useWorkspace();
   const owner = currentUser?.role === "restaurant_owner";
   const canManage = owner && manageConnection;
   const [state, setState] = useState<DriveState | null>(null);
@@ -148,7 +145,7 @@ function DepositDrivePanel({ initialCategory = "proofs", manageConnection = true
   const [copyMessage, setCopyMessage] = useState("");
   const [revision, setRevision] = useState(0);
   const [files, setFiles] = useState<FileRow[]>([]);
-  const [category, setCategory] = useState<string>(initialCategory);
+  const [category, setCategory] = useState("proofs");
   const [search, setSearch] = useState("");
   const [loadingFiles, setLoadingFiles] = useState(true);
 
@@ -219,6 +216,8 @@ function DepositDrivePanel({ initialCategory = "proofs", manageConnection = true
   }
 
   const connected = state?.status === "connected";
+  const showGiftCardProofs = category === "proofs" && owner && moduleEnabled(bootstrap, "giftCards");
+  const giftQuery = giftCardHistoryQuery({ ...emptyDepositFilters, search });
   const foldersReady = Boolean(state?.rootFolderId && state.proofsFolderId && state.generalFolderId);
   const folderIds = [
     { label: "Carpeta raíz", id: state?.rootFolderId },
@@ -318,24 +317,30 @@ function DepositDrivePanel({ initialCategory = "proofs", manageConnection = true
           <option value="proofs">Comprobantes</option>
           <option value="general">Archivos generales</option>
         </select>
-        <input className="foodie-input max-w-md" aria-label="Buscar archivos" placeholder="Buscar archivo, cliente o código" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <input className="foodie-input max-w-md" aria-label="Buscar archivos" placeholder="Buscar archivo, cliente o código" maxLength={120} value={search} onChange={(event) => setSearch(event.target.value)} />
       </div>
-      {loadError && <p role="alert" className="text-red-700">{loadError}</p>}
-      {loadingFiles && <p role="status" className="text-sm">Cargando archivos…</p>}
-      {!loadingFiles && !loadError && visibleFiles.length === 0 && (
-        <p className="text-sm text-neutral-600">{category === "general" && !state?.generalFolderId
-          ? "Configurá la carpeta de Drive para ver los archivos generales."
-          : search.trim() ? "No se encontraron archivos." : "Todavía no hay archivos en esta sección."}</p>
-      )}
-      {!loadingFiles && !loadError && visibleFiles.map((file) => (
-        <div key={file.id} className="rounded-xl border p-3 text-sm">
-          <strong>{file.originalName || file.name}</strong>
-          {file.request && <p>{file.request.deposit.reservation.fullName} · Reserva {file.request.deposit.reservation.code}</p>}
-          {file.receivedAt && <p>{new Date(file.receivedAt).toLocaleString("es-AR")}</p>}
-          {category === "proofs" && <p>{file.driveStatus === "synced" ? "Sincronizado" : file.driveStatus === "simulated" ? "Simulado" : "Pendiente de sincronizar"}</p>}
-          {(file.driveFileUrl || file.webViewLink) && <a href={file.driveFileUrl || file.webViewLink} target="_blank" rel="noreferrer" className="font-bold text-brand-orange">Abrir en Drive</a>}
-        </div>
-      ))}
+      <div className="space-y-2">
+        {category === "proofs" && <h3 className="text-sm font-bold">Señas de reservas</h3>}
+        {loadError && <p role="alert" className="text-red-700">{loadError}</p>}
+        {loadingFiles && <p role="status" className="text-sm">Cargando archivos…</p>}
+        {!loadingFiles && !loadError && visibleFiles.length === 0 && (
+          <p className="text-sm text-neutral-600">{category === "proofs" ? "No hay comprobantes de reservas para esta búsqueda."
+            : !state?.generalFolderId ? "Configurá la carpeta de Drive para ver los archivos generales."
+            : search.trim() ? "No se encontraron archivos." : "Todavía no hay archivos en esta sección."}</p>
+        )}
+        {!loadingFiles && !loadError && visibleFiles.map((file) => (
+          <div key={file.id} className="rounded-xl border p-3 text-sm">
+            <strong>{file.originalName || file.name}</strong>
+            {file.request && <p>{file.request.deposit.reservation.fullName} · Reserva {file.request.deposit.reservation.code}</p>}
+            {file.receivedAt && <p>{new Date(file.receivedAt).toLocaleString("es-AR")}</p>}
+            {category === "proofs" && <p>{file.driveStatus === "synced" ? "Sincronizado" : file.driveStatus === "simulated" ? "Simulado" : "Pendiente de sincronizar"}</p>}
+            {(file.driveFileUrl || file.webViewLink) && <a href={file.driveFileUrl || file.webViewLink} target="_blank" rel="noreferrer" className="font-bold text-brand-orange">Abrir en Drive</a>}
+          </div>
+        ))}
+      </div>
+      {showGiftCardProofs && <div className="border-t border-brand-line pt-4">
+        <GiftCardProofHistory key={giftQuery} query={giftQuery} refreshKey={revision} />
+      </div>}
     </div>
   );
 }
