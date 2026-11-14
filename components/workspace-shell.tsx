@@ -39,9 +39,9 @@ function NavigationGroup({ item, pathname, mobile, onNavigate }: {
   onNavigate?: () => void;
 }) {
   const root = item.href === "/configuracion/personalizar" ? "/configuracion" : item.href;
-  const active = isNavigationActive(pathname, root);
+  const active = isNavigationActive(pathname, root) || item.children?.some(child => pathname === child.href);
   const [override, setOverride] = useState<boolean | null>(null);
-  const open = override ?? active;
+  const open = override ?? Boolean(active);
   const buttonStyle = mobile ? "rounded-2xl px-4 py-3" : "workspace-side-item rounded-full px-5 py-2.5 2xl:text-base";
   return <div className="space-y-1.5">
     <button type="button" aria-expanded={open} onClick={() => setOverride(!open)}
@@ -137,18 +137,25 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
       ? [...restaurantNavigationItems, { href: "/configuracion/personalizar", label: "Configuración", children: configurationItems }, { href: "/usuarios", label: "Usuarios" }]
       : isEvents ? eventsNavigationItems : isReception ? receptionNavigationItems : restaurantNavigationItems;
   const giftCardNavigationItems: NavigationItem[] = moduleEnabled(bootstrap, "giftCards") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host", "events"].includes(currentUser.role) ? [{ href: "/gift-cards", label: "Gift Cards" }] : [];
-  const depositNavigationItems: NavigationItem[] = moduleEnabled(bootstrap, "deposits") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role) ? [{ href: "/senas", label: "Señas" }] : [];
-  const documentNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager"].includes(currentUser.role) ? [{
-    href: "/documentos",
-    label: "Documentos",
-    children: [
-      { href: "/documentos", label: "Archivos generales" },
-      ...(moduleEnabled(bootstrap, "deposits") ? [{ href: "/senas", label: "Comprobantes" }] : []),
-      ...(currentUser.role === "restaurant_owner" && moduleEnabled(bootstrap, "deposits") ? [{ href: "/documentos/drive", label: "Configurar Drive" }] : [])
-    ]
-  }] : [];
+  const depositsEnabled = moduleEnabled(bootstrap, "deposits");
+  const documentChildren: NavigationItem[] = [];
+  if (currentUser?.scope === "restaurant") {
+    const { role } = currentUser;
+    if (depositsEnabled && ["restaurant_owner", "restaurant_manager", "cashier"].includes(role)) {
+      documentChildren.push({ href: "/senas", label: "Comprobantes" });
+    }
+    if (["restaurant_owner", "restaurant_manager"].includes(role)) {
+      documentChildren.push({ href: "/documentos", label: "Archivos generales" });
+    }
+    if (depositsEnabled && role === "restaurant_owner") {
+      documentChildren.push({ href: "/documentos/drive", label: "Configurar Drive" });
+    }
+  }
+  const documentNavigationItems: NavigationItem[] = documentChildren.length
+    ? [{ href: "/documentos", label: "Documentos", children: documentChildren }]
+    : [];
   const notificationItems: NavigationItem[] = (currentUser?.role !== "cashier" || moduleEnabled(bootstrap, "deposits")) && moduleEnabled(bootstrap, "notifications") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host", "cashier"].includes(currentUser.role) ? [{ href: "/notificaciones", label: "Notificaciones" }] : [];
-  const navigationItems: NavigationItem[] = currentUser?.scope === "platform" ? platformNavigationItems : [...restaurantBaseNavigationItems, ...notificationItems, ...depositNavigationItems, ...documentNavigationItems, ...giftCardNavigationItems, ...chatNavigationItems].filter((item) => !bootstrap?.isDemo || moduleEnabled(bootstrap, "deposits") || item.href !== "/chat");
+  const navigationItems: NavigationItem[] = currentUser?.scope === "platform" ? platformNavigationItems : [...restaurantBaseNavigationItems, ...notificationItems, ...documentNavigationItems, ...giftCardNavigationItems, ...chatNavigationItems].filter((item) => !bootstrap?.isDemo || depositsEnabled || item.href !== "/chat");
   const workspaceLabel = currentUser?.scope === "platform" ? "Administracion" : "Operacion";
   const workspaceName = currentUser?.scope === "platform" ? "Foodie AI" : `${bootstrap?.name || "Restaurante"}${bootstrap?.isDemo ? " · DEMO" : ""}`;
   const workspaceImage = currentUser?.scope === "restaurant" ? bootstrap?.profileImageUrl : "";
