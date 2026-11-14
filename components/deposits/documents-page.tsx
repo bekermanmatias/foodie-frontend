@@ -10,18 +10,22 @@ import { ListPagination } from "./list-pagination";
 type DriveState = { demo: boolean; status: string; rootFolderId?: string; proofsFolderId?: string; generalFolderId?: string; error?: string };
 type FileRow = { id: string; name: string; webViewLink?: string };
 
-export function DocumentsPage({ driveConnection }: { driveConnection?: "cancelled" | "failed" }) {
+export function DocumentsPage({ configuration = false, driveConnection }: {
+  configuration?: boolean;
+  driveConnection?: "cancelled" | "failed";
+}) {
   const { bootstrap, currentUser } = useWorkspace();
   const allowed = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager"].includes(currentUser.role);
 
-  return <WorkspaceShell title="Documentos" description="Consultá los archivos generales y administrá la conexión de Google Drive del restaurante.">
+  return <WorkspaceShell title={configuration ? "Configurar Drive" : "Archivos generales"}
+    description={configuration ? "Administrá la conexión y las carpetas de Google Drive del restaurante." : "Consultá los archivos generales del restaurante en Google Drive."}>
     {!allowed ? <p>Solo el dueño y el gerente pueden consultar documentos.</p>
       : !moduleEnabled(bootstrap, "deposits") ? <p>Habilitá Señas y pagos para consultar los archivos del restaurante.</p>
+      : configuration && currentUser?.role !== "restaurant_owner" ? <p>Solo el dueño puede configurar Google Drive.</p>
       : <div className="space-y-4">
         {driveConnection === "cancelled" && <p role="status" className="text-sm">Cancelaste la autorización de Google.</p>}
         {driveConnection === "failed" && <p role="alert" className="text-sm text-red-700">No se pudo conectar Google Drive. Podés volver a intentarlo desde esta pantalla.</p>}
-        <DocumentDrivePanel />
-        <Link href="/senas" className="inline-block text-sm font-bold text-brand-orange">Ir a comprobantes y pagos</Link>
+        <DocumentDrivePanel configuration={configuration} />
       </div>}
   </WorkspaceShell>;
 }
@@ -36,7 +40,7 @@ function driveFolderId(input: string) {
   }
 }
 
-function DocumentDrivePanel() {
+function DocumentDrivePanel({ configuration }: { configuration: boolean }) {
   const api = useDepositApi();
   const { currentUser } = useWorkspace();
   const owner = currentUser?.role === "restaurant_owner";
@@ -69,7 +73,7 @@ function DocumentDrivePanel() {
         const status = await api<DriveState>("/restaurant/deposits/drive/status", { signal });
         if (signal.aborted) return;
         setState(status);
-        if (status.status !== "connected" || !status.generalFolderId) {
+        if (configuration || status.status !== "connected" || !status.generalFolderId) {
           setFiles([]);
           setNextPageToken(null);
           return;
@@ -96,7 +100,7 @@ function DocumentDrivePanel() {
       request?.abort();
       window.removeEventListener("focus", refresh);
     };
-  }, [api, pageToken, revision, appliedSearch]);
+  }, [api, configuration, pageToken, revision, appliedSearch]);
 
   async function connect() {
     setBusy(true);
@@ -131,6 +135,7 @@ function DocumentDrivePanel() {
   }
 
   const connected = state?.status === "connected";
+  const openFolderId = configuration ? state?.rootFolderId : state?.generalFolderId;
   const foldersReady = Boolean(state?.rootFolderId && state.proofsFolderId && state.generalFolderId);
   const folderIds = [
     { label: "Carpeta raíz", id: state?.rootFolderId },
@@ -149,29 +154,30 @@ function DocumentDrivePanel() {
       {state?.error && <p className="text-orange-800">{state.error}</p>}
       {state && (
         <div className="flex flex-wrap items-center gap-2">
-          {owner && !state.demo && (
+          {configuration && !state.demo && (
             <button type="button" disabled={busy} onClick={() => void connect()} className={connected ? secondary : primary}>
               {connected || state.status === "reconnect_required" ? "Reconectar Google" : "Conectar Google"}
             </button>
           )}
-          {owner && (connected || state.demo) && !foldersReady && (
+          {configuration && (connected || state.demo) && !foldersReady && (
             <button type="button" disabled={busy} onClick={() => void setup()} className={primary}>
               {busy ? "Configurando…" : "Configurar carpeta Foodie"}
             </button>
           )}
-          {connected && foldersReady && !state.demo && (
-            <a className={primary} href={`https://drive.google.com/drive/folders/${encodeURIComponent(state.rootFolderId!)}`} target="_blank" rel="noreferrer">
+          {connected && !state.demo && openFolderId && (
+            <a className={primary} href={`https://drive.google.com/drive/folders/${encodeURIComponent(openFolderId)}`} target="_blank" rel="noreferrer">
               Abrir carpeta en Drive
             </a>
           )}
-          {owner && connected && !state.demo && (
+          {configuration && connected && !state.demo && (
             <button type="button" className={secondary} disabled={busy} aria-expanded={showFolderLink} onClick={() => setShowFolderLink(!showFolderLink)}>
               {showFolderLink ? "Cancelar" : foldersReady ? "Cambiar carpeta" : "Usar una carpeta existente"}
             </button>
           )}
+          {!configuration && owner && (!connected || !foldersReady) && <Link href="/documentos/drive" className={secondary}>Configurar Drive</Link>}
         </div>
       )}
-      {owner && connected && showFolderLink && (
+      {configuration && connected && showFolderLink && (
         <form className="space-y-2" onSubmit={(event) => {
           event.preventDefault();
           if (busy) return;
@@ -189,7 +195,7 @@ function DocumentDrivePanel() {
           </div>
         </form>
       )}
-      {owner && connected && foldersReady && !state?.demo && (
+      {configuration && connected && foldersReady && !state?.demo && (
         <details className="space-y-2 rounded-xl border border-brand-line p-3">
           <summary className="cursor-pointer text-sm font-semibold">IDs de carpetas</summary>
           <dl className="divide-y divide-brand-line">
@@ -215,8 +221,7 @@ function DocumentDrivePanel() {
         </details>
       )}
       {error && <p role="alert" className="text-red-700">{error}</p>}
-      {connected && state?.generalFolderId && <div className="space-y-2">
-        <h3 className="text-sm font-bold">Archivos generales</h3>
+      {!configuration && connected && state?.generalFolderId && <div className="space-y-2">
         <form className="flex flex-wrap gap-2" onSubmit={event => {
           event.preventDefault();
           setDrivePages([]);
@@ -228,22 +233,22 @@ function DocumentDrivePanel() {
       </div>}
       <div className="space-y-2">
         {loadError && <p role="alert" className="text-red-700">{loadError}</p>}
-        {loadingFiles && <p role="status" className="text-sm">Cargando archivos…</p>}
-        {!loadingFiles && !loadError && files.length === 0 && (
+        {!configuration && loadingFiles && <p role="status" className="text-sm">Cargando archivos…</p>}
+        {!configuration && !loadingFiles && !loadError && files.length === 0 && (
           <p className="text-sm text-neutral-600">{state?.demo ? "Los archivos de Drive son simulados en esta cuenta."
             : !connected ? "Conectá Google Drive para consultar los archivos generales."
             : !state?.generalFolderId ? "Configurá la carpeta de Drive para ver los archivos generales."
             : appliedSearch ? "No se encontraron archivos para esta búsqueda." : "Todavía no hay archivos en esta sección."}</p>
         )}
-        {!loadingFiles && !loadError && files.map((file) => (
+        {!configuration && !loadingFiles && !loadError && files.map((file) => (
           <div key={file.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm">
             <strong>{file.name}</strong>
             {file.webViewLink && <a href={file.webViewLink} target="_blank" rel="noreferrer" className="font-bold text-brand-orange">Abrir en Drive</a>}
           </div>
         ))}
-        <ListPagination page={drivePages.length + 1} hasNext={Boolean(nextPageToken) && !loadError} loading={loadingFiles}
+        {!configuration && <ListPagination page={drivePages.length + 1} hasNext={Boolean(nextPageToken) && !loadError} loading={loadingFiles}
             onPrevious={() => setDrivePages(current => current.slice(0, -1))}
-            onNext={() => { if (nextPageToken) setDrivePages(current => [...current, nextPageToken]); }} />
+            onNext={() => { if (nextPageToken) setDrivePages(current => [...current, nextPageToken]); }} />}
       </div>
     </div>
   );

@@ -28,6 +28,38 @@ const platformNavigationItems = [
 
 type NavigationItem = { href: string; label: string; children?: Array<{ href: string; label: string }> };
 
+function isNavigationActive(pathname: string, href: string) {
+  return pathname === href || (href !== "/chat" && pathname.startsWith(`${href}/`));
+}
+
+function NavigationGroup({ item, pathname, mobile, onNavigate }: {
+  item: NavigationItem;
+  pathname: string;
+  mobile?: boolean;
+  onNavigate?: () => void;
+}) {
+  const root = item.href === "/configuracion/personalizar" ? "/configuracion" : item.href;
+  const active = isNavigationActive(pathname, root);
+  const [override, setOverride] = useState<boolean | null>(null);
+  const open = override ?? active;
+  const buttonStyle = mobile ? "rounded-2xl px-4 py-3" : "workspace-side-item rounded-full px-5 py-2.5 2xl:text-base";
+  return <div className="space-y-1.5">
+    <button type="button" aria-expanded={open} onClick={() => setOverride(!open)}
+      className={`${buttonStyle} flex w-full items-center gap-3 text-left text-sm font-bold transition ${active ? "bg-brand-orange text-white" : "text-white hover:bg-white/10"}`}>
+      {item.label}<ChevronDown aria-hidden="true" className={`ml-auto h-4 w-4 transition ${open ? "rotate-180" : ""}`} />
+    </button>
+    {open && <div className="ml-3 space-y-1 border-l border-white/20 pl-3">
+      {item.children?.map(child => {
+        const selected = pathname === child.href;
+        return <Link key={child.href} href={child.href} onClick={onNavigate} aria-current={selected ? "page" : undefined}
+          className={`workspace-side-child block rounded-full px-3 font-bold ${mobile ? "py-2.5 text-sm" : "py-1.5 text-xs 2xl:text-sm"} ${selected ? "bg-white text-brand-orange" : "text-white/75 hover:text-white"}`}>
+          {child.label}
+        </Link>;
+      })}
+    </div>}
+  </div>;
+}
+
 export function WorkspaceHeaderBrand() {
   return (
     <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white px-4 py-2">
@@ -86,7 +118,6 @@ export function WorkspaceShell({
   compactShortDesktop?: boolean;
 }) {
   const pathname = usePathname();
-  const [configurationOpen, setConfigurationOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { bootstrap, chatSession, currentUser, feedback, userName, logout, selectedBranchId } = useWorkspace();
 
@@ -107,14 +138,23 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
       : isEvents ? eventsNavigationItems : isReception ? receptionNavigationItems : restaurantNavigationItems;
   const giftCardNavigationItems: NavigationItem[] = moduleEnabled(bootstrap, "giftCards") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host", "events"].includes(currentUser.role) ? [{ href: "/gift-cards", label: "Gift Cards" }] : [];
   const depositNavigationItems: NavigationItem[] = moduleEnabled(bootstrap, "deposits") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "cashier"].includes(currentUser.role) ? [{ href: "/senas", label: "Señas" }] : [];
-  const documentNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager"].includes(currentUser.role) ? [{ href: "/documentos", label: "Documentos" }] : [];
+  const documentNavigationItems: NavigationItem[] = currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager"].includes(currentUser.role) ? [{
+    href: "/documentos",
+    label: "Documentos",
+    children: [
+      { href: "/documentos", label: "Archivos generales" },
+      ...(moduleEnabled(bootstrap, "deposits") ? [{ href: "/senas", label: "Comprobantes" }] : []),
+      ...(currentUser.role === "restaurant_owner" && moduleEnabled(bootstrap, "deposits") ? [{ href: "/documentos/drive", label: "Configurar Drive" }] : [])
+    ]
+  }] : [];
   const notificationItems: NavigationItem[] = (currentUser?.role !== "cashier" || moduleEnabled(bootstrap, "deposits")) && moduleEnabled(bootstrap, "notifications") && currentUser?.scope === "restaurant" && ["restaurant_owner", "restaurant_manager", "host", "cashier"].includes(currentUser.role) ? [{ href: "/notificaciones", label: "Notificaciones" }] : [];
   const navigationItems: NavigationItem[] = currentUser?.scope === "platform" ? platformNavigationItems : [...restaurantBaseNavigationItems, ...notificationItems, ...depositNavigationItems, ...documentNavigationItems, ...giftCardNavigationItems, ...chatNavigationItems].filter((item) => !bootstrap?.isDemo || moduleEnabled(bootstrap, "deposits") || item.href !== "/chat");
   const workspaceLabel = currentUser?.scope === "platform" ? "Administracion" : "Operacion";
   const workspaceName = currentUser?.scope === "platform" ? "Foodie AI" : `${bootstrap?.name || "Restaurante"}${bootstrap?.isDemo ? " · DEMO" : ""}`;
   const workspaceImage = currentUser?.scope === "restaurant" ? bootstrap?.profileImageUrl : "";
   const mobileNavigationItems = navigationItems.flatMap((item) => item.children ? item.children : [item]);
-  const activeMobileNavigationItem = mobileNavigationItems.find((item) => pathname === item.href || (item.href !== "/chat" && pathname.startsWith(`${item.href}/`)));
+  const activeMobileNavigationItem = mobileNavigationItems.find(item => pathname === item.href)
+    ?? mobileNavigationItems.find(item => isNavigationActive(pathname, item.href));
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -145,9 +185,8 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
             <nav className="workspace-nav-scroll mt-7 min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-2 2xl:mt-8 2xl:space-y-2">
               {navigationItems.map((item) => {
                 const active = pathname === item.href || (item.href !== "/chat" && pathname.startsWith(`${item.href}/`));
-                const isConfigurationOpen = Boolean(item.children) && (configurationOpen || pathname.startsWith("/configuracion"));
                 return (
-                  item.children ? <div key={item.href} className="space-y-1.5"><button type="button" onClick={() => setConfigurationOpen((current) => !current)} className={`workspace-side-item flex w-full items-center gap-3 rounded-full px-5 py-2.5 text-left text-sm font-bold transition 2xl:text-base ${pathname.startsWith("/configuracion") ? "bg-brand-orange text-white" : "text-white hover:bg-white/10"}`}>{item.label}<ChevronDown className={`ml-auto h-4 w-4 transition ${isConfigurationOpen ? "rotate-180" : ""}`} /></button>{isConfigurationOpen ? <div className="ml-3 space-y-1 border-l border-white/20 pl-3">{item.children.map((child) => <Link key={child.href} href={child.href} className={`workspace-side-child block rounded-full px-3 py-1.5 text-xs font-bold 2xl:text-sm ${pathname === child.href ? "bg-white text-brand-orange" : "text-white/75 hover:text-white"}`}>{child.label}</Link>)}</div> : null}</div> : <Link key={item.href} href={item.href} className={`workspace-side-item flex items-center gap-3 rounded-full px-5 py-2.5 text-sm font-bold transition 2xl:text-base ${active ? "bg-brand-orange text-white" : "text-white hover:bg-white/10"}`}>{item.label}{item.href === "/notificaciones" ? <NotificationPendingDot className="ml-auto" /> : null}</Link>
+                  item.children ? <NavigationGroup key={item.href} item={item} pathname={pathname} /> : <Link key={item.href} href={item.href} className={`workspace-side-item flex items-center gap-3 rounded-full px-5 py-2.5 text-sm font-bold transition 2xl:text-base ${active ? "bg-brand-orange text-white" : "text-white hover:bg-white/10"}`}>{item.label}{item.href === "/notificaciones" ? <NotificationPendingDot className="ml-auto" /> : null}</Link>
                 );
               })}
             </nav>
@@ -203,8 +242,9 @@ const configurationItems: NavigationItem["children"] = [{ href: "/configuracion/
             {mobileMenuOpen ? (
               <>
                 <button type="button" aria-label="Cerrar menú" onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 z-30 cursor-default bg-black/45" />
-                <nav id="mobile-workspace-menu" className="absolute left-0 right-0 top-full z-50 mt-3 rounded-[22px] border border-white/10 bg-[#1F1F21] p-2 shadow-[0_20px_45px_rgba(0,0,0,0.4)]">
-                  {mobileNavigationItems.map((item) => {
+                <nav id="mobile-workspace-menu" className="absolute left-0 right-0 top-full z-50 mt-3 max-h-[60dvh] overflow-y-auto rounded-[22px] border border-white/10 bg-[#1F1F21] p-2 shadow-[0_20px_45px_rgba(0,0,0,0.4)]">
+                  {navigationItems.map((item) => {
+                    if (item.children) return <NavigationGroup key={item.href} item={item} pathname={pathname} mobile onNavigate={() => setMobileMenuOpen(false)} />;
                     const active = pathname === item.href || (item.href !== "/chat" && pathname.startsWith(`${item.href}/`));
                     return <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${active ? "bg-brand-orange text-white" : "text-white hover:bg-white/10"}`}>{item.label}{item.href === "/notificaciones" ? <NotificationPendingDot className="ml-auto" /> : null}</Link>;
                   })}

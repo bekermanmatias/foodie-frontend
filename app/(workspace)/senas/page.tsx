@@ -7,7 +7,7 @@ export default async function Page({ searchParams }: {
   const { tab, connection } = await searchParams;
   if (tab === "drive") {
     const status = connection === "cancelled" || connection === "failed" ? `?connection=${connection}` : "";
-    redirect(`/documentos${status}`);
+    redirect(`/documentos/drive${status}`);
   }
   return <DepositsPage />;
 }
